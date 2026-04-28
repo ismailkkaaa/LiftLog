@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="space-y-5 animate-rise">
+    <header class="flex items-start justify-between gap-4">
+        <div>
+            <p id="dashboard-greeting" class="text-sm font-medium text-slate-500">Welcome back</p>
+            <h1 class="mt-1 text-3xl font-extrabold text-slate-900">Today’s momentum</h1>
+        </div>
+        <button id="resume-workout-button" class="hidden rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-float">Resume</button>
+    </header>
+
+    <div class="card-gradient">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Today’s workout</p>
+                <h2 id="today-workout-title" class="mt-3 text-2xl font-bold text-slate-900">No plan yet</h2>
+                <p id="today-workout-subtitle" class="mt-2 text-sm text-slate-600">Create a plan to start tracking live gym progress.</p>
+            </div>
+            <div class="rounded-3xl bg-white/90 px-4 py-3 text-right shadow-soft">
+                <p class="text-xs font-medium text-slate-500">Weekly streak</p>
+                <p id="weekly-target-score" class="mt-1 text-2xl font-extrabold text-slate-900">0/5</p>
+            </div>
+        </div>
+        <div class="mt-5 flex gap-3">
+            <a href="/workout-creator" class="secondary-button flex-1 text-center">Plan workouts</a>
+            <button id="start-todays-workout" class="primary-button flex-1">Start session</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <div class="panel">
+            <p class="text-sm text-slate-500">Completed sessions</p>
+            <p id="completed-sessions" class="mt-2 text-3xl font-extrabold text-slate-900">0</p>
+        </div>
+        <div class="panel">
+            <p class="text-sm text-slate-500">Workout efficiency</p>
+            <p id="completion-rate" class="mt-2 text-3xl font-extrabold text-slate-900">0%</p>
+        </div>
+    </div>
+
+    <section class="panel">
+        <div class="mb-4 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900">Weekly layout</h3>
+                <p class="text-sm text-slate-500">Tap a day to train or adjust your plan.</p>
+            </div>
+        </div>
+        <div id="day-card-grid" class="grid grid-cols-2 gap-3"></div>
+    </section>
+
+    <section id="dashboard-empty" class="empty-state hidden">
+        <h3 class="text-xl font-bold text-slate-900">No workouts configured</h3>
+        <p class="mt-2 text-sm text-slate-500">Build your first weekly split and LiftLog will surface daily sessions, stats, and progress automatically.</p>
+        <a href="/workout-creator" class="primary-button mt-5 inline-flex">Create your first plan</a>
+    </section>
+</section>
+{% endblock %}

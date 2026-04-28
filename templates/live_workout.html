@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="space-y-5 animate-rise">
+    <header class="flex items-start justify-between gap-3">
+        <div>
+            <p class="text-sm font-medium text-slate-500">Live Workout Tracking</p>
+            <h1 class="mt-1 text-3xl font-extrabold text-slate-900">Stay in the set</h1>
+        </div>
+        <div id="live-status-badge" class="rounded-full bg-cyan-100 px-3 py-2 text-xs font-semibold text-cyan-700">Ready</div>
+    </header>
+
+    <section id="live-empty" class="empty-state">
+        <h2 class="text-2xl font-bold text-slate-900">No active workout</h2>
+        <p class="mt-2 text-sm text-slate-500">Start today’s session from the dashboard or pick a workout day from your plan.</p>
+        <a href="/dashboard" class="primary-button mt-5 inline-flex">Go to dashboard</a>
+    </section>
+
+    <section id="live-panel" class="hidden space-y-4">
+        <div class="panel">
+            <div class="mb-4 flex items-center justify-between text-sm text-slate-500">
+                <span id="live-workout-name">Workout</span>
+                <span id="live-progress-text">0% done</span>
+            </div>
+            <div class="h-3 rounded-full bg-slate-100">
+                <div id="live-progress-bar" class="h-3 rounded-full bg-cyan-500 transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="rounded-[2rem] bg-white p-5 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Current exercise</p>
+            <h2 id="exercise-name" class="mt-3 text-3xl font-extrabold text-slate-900">Bench Press</h2>
+            <div class="mt-5 grid grid-cols-2 gap-3">
+                <div class="rounded-3xl bg-slate-50 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Set</p>
+                    <p id="set-label" class="mt-2 text-3xl font-extrabold text-slate-900">1</p>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Target reps</p>
+                    <p id="target-reps" class="mt-2 text-3xl font-extrabold text-slate-900">12</p>
+                </div>
+            </div>
+
+            <form id="set-complete-form" class="mt-5 space-y-4">
+                <label class="field">
+                    <span>Weight used (kg)</span>
+                    <input name="weight_used" type="number" step="0.5" placeholder="40" inputmode="decimal" required>
+                </label>
+                <label class="field">
+                    <span>Actual reps</span>
+                    <input name="actual_reps" type="number" min="1" placeholder="12" required>
+                </label>
+                <button class="primary-button w-full" type="submit">Complete set</button>
+            </form>
+        </div>
+
+        <div id="rest-panel" class="panel hidden">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm text-slate-500">Rest timer</p>
+                    <h3 id="rest-countdown" class="mt-2 text-4xl font-extrabold text-slate-900">90s</h3>
+                </div>
+                <button id="skip-rest-button" class="secondary-button">Skip</button>
+            </div>
+        </div>
+
+        <div id="pr-banner" class="hidden rounded-[1.75rem] bg-emerald-500 px-5 py-4 text-white shadow-soft">
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-100">Personal record</p>
+            <p id="pr-banner-text" class="mt-2 text-lg font-bold">New PR</p>
+        </div>
+    </section>
+</section>
+{% endblock %}

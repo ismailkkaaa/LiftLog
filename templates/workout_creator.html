@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="space-y-5 animate-rise">
+    <header>
+        <p class="text-sm font-medium text-slate-500">Workout Plan Creator</p>
+        <h1 class="mt-1 text-3xl font-extrabold text-slate-900">Build your weekly split</h1>
+    </header>
+
+    <form id="workout-form" class="space-y-5">
+        <div class="panel space-y-4">
+            <label class="field">
+                <span>Plan name</span>
+                <input name="name" type="text" placeholder="Push Pull Legs" required>
+            </label>
+            <label class="field">
+                <span>Notes</span>
+                <textarea name="notes" rows="3" placeholder="Keep it simple, recover well, progress steadily."></textarea>
+            </label>
+        </div>
+
+        <div id="days-builder" class="space-y-4"></div>
+
+        <div class="flex gap-3">
+            <button id="add-day-button" type="button" class="secondary-button flex-1">Add workout day</button>
+            <button type="submit" class="primary-button flex-1">Save plan</button>
+        </div>
+    </form>
+
+    <section class="panel">
+        <div class="mb-4 flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900">Saved plans</h2>
+                <p class="text-sm text-slate-500">Edit or remove existing workout structures.</p>
+            </div>
+        </div>
+        <div id="saved-workouts" class="space-y-3"></div>
+    </section>
+</section>
+{% endblock %}

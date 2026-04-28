@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="space-y-5 animate-rise">
+    <header>
+        <p class="text-sm font-medium text-slate-500">Progress Analytics</p>
+        <h1 class="mt-1 text-3xl font-extrabold text-slate-900">See the trendline</h1>
+    </header>
+
+    <div class="panel">
+        <h2 class="text-lg font-bold text-slate-900">Strength progress</h2>
+        <div class="mt-4 chart-shell">
+            <canvas id="strength-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2 class="text-lg font-bold text-slate-900">Body weight</h2>
+        <div class="mt-4 chart-shell">
+            <canvas id="weight-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2 class="text-lg font-bold text-slate-900">Weekly consistency</h2>
+        <div class="mt-4 chart-shell">
+            <canvas id="consistency-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900">Exercise history</h2>
+                <p class="text-sm text-slate-500">Top recent movement progress.</p>
+            </div>
+        </div>
+        <div id="exercise-history-list" class="mt-4 space-y-3"></div>
+    </div>
+</section>
+{% endblock %}
