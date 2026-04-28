@@ -58,5 +58,26 @@
         </div>
         <div id="pr-list" class="space-y-3"></div>
     </section>
+
+    <section class="panel danger-zone">
+        <div class="mb-4">
+            <h2 class="text-xl font-bold text-slate-900">Danger Zone</h2>
+            <p class="mt-1 text-sm text-slate-500">Clear your profile, workout plans, history, progress logs, and personal records.</p>
+        </div>
+        <button id="clear-data-button" type="button" class="danger-button w-full">Clear All Data</button>
+    </section>
+
+    <div id="reset-data-modal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop" data-close-modal></div>
+        <div class="modal-card">
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-rose-500">Confirm reset</p>
+            <h3 class="mt-3 text-2xl font-bold text-slate-900">Delete all profile and training data?</h3>
+            <p class="mt-2 text-sm text-slate-500">This clears your profile, workout plans, history, progress logs, and personal records. This cannot be undone.</p>
+            <div class="mt-6 flex gap-3">
+                <button type="button" class="secondary-button flex-1" data-close-modal>Cancel</button>
+                <button id="confirm-reset-data-button" type="button" class="danger-button danger-button-solid flex-1">Delete data</button>
+            </div>
+        </div>
+    </div>
 </section>
 {% endblock %}

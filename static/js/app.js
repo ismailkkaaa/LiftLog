@@ -54,15 +54,21 @@
 
         if (data.todays_workout) {
             todayTitle.textContent = `${data.todays_workout.day_name} • ${data.todays_workout.category}`;
-            todaySubtitle.textContent = `${data.todays_workout.workout_name} is ready. Tap once and log each set live.`;
-            startButton.addEventListener("click", async () => {
-                const session = await api.startLiveWorkout(data.todays_workout.id);
-                ui.persistSessionState({ sessionId: session.session.id });
-                window.location.href = "/live-workout";
-            });
+            if (data.todays_workout.is_locked) {
+                todaySubtitle.textContent = "Completed for this week";
+                startButton.disabled = true;
+                startButton.textContent = "Completed for this week";
+            } else {
+                todaySubtitle.textContent = `${data.todays_workout.workout_name} is ready. Tap once and log each set live.`;
+                startButton.addEventListener("click", async () => {
+                    const session = await api.startLiveWorkout(data.todays_workout.id);
+                    ui.persistSessionState({ sessionId: session.session.id });
+                    window.location.href = "/live-workout";
+                });
+            }
         } else {
             startButton.disabled = true;
-            startButton.classList.add("opacity-50");
+            startButton.textContent = "No workout today";
         }
 
         if (data.resume_session_id) {
@@ -78,21 +84,29 @@
             emptyState.classList.remove("hidden");
         }
         data.day_cards.forEach((day) => {
-            const card = document.createElement("button");
-            card.type = "button";
-            card.className = `rounded-[1.5rem] border p-4 text-left transition ${
-                day.completed_today ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"
-            }`;
+            const card = document.createElement("article");
+            card.className = `workout-day-card ${day.is_locked ? "is-locked" : ""}`;
             card.innerHTML = `
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] ${day.completed_today ? "text-emerald-600" : "text-slate-500"}">${day.day_name}</p>
-                <p class="mt-2 text-lg font-bold text-slate-900">${day.category}</p>
-                <p class="mt-1 text-sm text-slate-500">${day.workout_name}</p>
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] ${day.is_locked ? "text-emerald-600" : "text-slate-500"}">${day.day_name}</p>
+                        <p class="mt-2 text-lg font-bold text-slate-900">${day.category}</p>
+                        <p class="mt-1 text-sm text-slate-500">${day.workout_name}</p>
+                    </div>
+                    ${day.is_locked ? '<span class="workout-day-badge is-complete">Completed</span>' : ""}
+                </div>
+                <p class="mt-4 text-sm ${day.is_locked ? "text-emerald-700" : "text-slate-500"}">${day.is_locked ? "Completed for this week" : "Ready to train"}</p>
+                <button type="button" class="${day.is_locked ? "secondary-button" : "primary-button"} mt-4 w-full" ${day.is_locked ? "disabled" : ""}>
+                    ${day.is_locked ? "Completed for this week" : "Start workout"}
+                </button>
             `;
-            card.addEventListener("click", async () => {
-                const session = await api.startLiveWorkout(day.id);
-                ui.persistSessionState({ sessionId: session.session.id });
-                window.location.href = "/live-workout";
-            });
+            if (!day.is_locked) {
+                card.querySelector("button").addEventListener("click", async () => {
+                    const session = await api.startLiveWorkout(day.id);
+                    ui.persistSessionState({ sessionId: session.session.id });
+                    window.location.href = "/live-workout";
+                });
+            }
             dayGrid.appendChild(card);
         });
     }
@@ -105,7 +119,17 @@
 
         addDayButton.addEventListener("click", () => addDayCard(builder));
         form.addEventListener("submit", submitWorkoutForm);
-        addDayCard(builder, { day_name: "Monday", category: "Chest", exercises: [{ name: "Bench Press", rest_seconds: 90, sets: [{ target_reps: 15 }, { target_reps: 12 }, { target_reps: 10 }] }] });
+        addDayCard(builder, {
+            day_name: "Monday",
+            category: "Chest",
+            exercises: [
+                {
+                    name: "Bench Press",
+                    rest_seconds: 90,
+                    sets: [{ target_reps: 15 }, { target_reps: 12 }, { target_reps: 10 }],
+                },
+            ],
+        });
         await renderSavedWorkouts();
 
         async function submitWorkoutForm(event) {
@@ -175,24 +199,47 @@
 
     async function initLiveWorkout() {
         const empty = document.getElementById("live-empty");
+        const blocked = document.getElementById("live-blocked");
         const panel = document.getElementById("live-panel");
         const form = document.getElementById("set-complete-form");
         const skipRestButton = document.getElementById("skip-rest-button");
         const persisted = ui.readSessionState();
         let sessionId = persisted?.sessionId;
 
-        if (!sessionId) {
-            const current = await api.getCurrentSession();
-            sessionId = current.session?.id || current.session?.session?.id;
+        function showEmpty() {
+            empty.classList.remove("hidden");
+            blocked.classList.add("hidden");
+            panel.classList.add("hidden");
+        }
+
+        function showBlocked(message) {
+            empty.classList.add("hidden");
+            blocked.classList.remove("hidden");
+            panel.classList.add("hidden");
+            document.getElementById("live-blocked-message").textContent = message;
+            ui.clearSessionState();
         }
 
         if (!sessionId) {
-            empty.classList.remove("hidden");
-            panel.classList.add("hidden");
+            try {
+                const current = await api.getCurrentSession();
+                sessionId = current.session?.id || current.session?.session?.id;
+            } catch (error) {
+                if (error.message === "Workout already completed for this week") {
+                    showBlocked(error.message);
+                    return;
+                }
+                throw error;
+            }
+        }
+
+        if (!sessionId) {
+            showEmpty();
             return;
         }
 
         empty.classList.add("hidden");
+        blocked.classList.add("hidden");
         panel.classList.remove("hidden");
 
         form.addEventListener("submit", async (event) => {
@@ -224,8 +271,16 @@
             document.getElementById("rest-panel").classList.add("hidden");
         });
 
-        const details = await api.getSession(sessionId);
-        renderSession(details);
+        try {
+            const details = await api.getSession(sessionId);
+            renderSession(details);
+        } catch (error) {
+            if (error.message === "Workout already completed for this week") {
+                showBlocked(error.message);
+                return;
+            }
+            throw error;
+        }
     }
 
     async function initProgress() {
@@ -253,30 +308,35 @@
 
         const list = document.getElementById("exercise-history-list");
         list.innerHTML = "";
-        Object.entries(data.exercise_history).slice(0, 5).forEach(([exercise, entries]) => {
-            const latest = entries[0];
-            const card = document.createElement("div");
-            card.className = "rounded-[1.4rem] bg-slate-50 p-4";
-            card.innerHTML = `
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <p class="text-base font-bold text-slate-900">${exercise}</p>
-                        <p class="mt-1 text-sm text-slate-500">${entries.length} logged sessions</p>
+        Object.entries(data.exercise_history)
+            .slice(0, 5)
+            .forEach(([exercise, entries]) => {
+                const latest = entries[0];
+                const card = document.createElement("div");
+                card.className = "rounded-[1.4rem] bg-slate-50 p-4";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-base font-bold text-slate-900">${exercise}</p>
+                            <p class="mt-1 text-sm text-slate-500">${entries.length} logged sessions</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-extrabold text-slate-900">${latest.max_weight || 0} kg</p>
+                            <p class="text-xs text-slate-500">${latest.logged_on || ""}</p>
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <p class="text-lg font-extrabold text-slate-900">${latest.max_weight || 0} kg</p>
-                        <p class="text-xs text-slate-500">${latest.logged_on || ""}</p>
-                    </div>
-                </div>
-            `;
-            list.appendChild(card);
-        });
+                `;
+                list.appendChild(card);
+            });
     }
 
     async function initProfile() {
         const form = document.getElementById("profile-form");
         const historyList = document.getElementById("history-list");
         const prList = document.getElementById("pr-list");
+        const clearDataButton = document.getElementById("clear-data-button");
+        const resetModal = document.getElementById("reset-data-modal");
+        const confirmResetButton = document.getElementById("confirm-reset-data-button");
 
         const [{ profile }, history] = await Promise.all([api.getProfile(), api.getHistory()]);
         if (profile) ui.setFormValues(form, profile);
@@ -287,12 +347,44 @@
             ui.toast("Profile updated", "success");
         });
 
+        function closeResetModal() {
+            resetModal.classList.add("hidden");
+            resetModal.setAttribute("aria-hidden", "true");
+        }
+
+        function openResetModal() {
+            resetModal.classList.remove("hidden");
+            resetModal.setAttribute("aria-hidden", "false");
+        }
+
+        clearDataButton.addEventListener("click", openResetModal);
+        resetModal.querySelectorAll("[data-close-modal]").forEach((element) => {
+            element.addEventListener("click", closeResetModal);
+        });
+        confirmResetButton.addEventListener("click", async () => {
+            confirmResetButton.disabled = true;
+            try {
+                const result = await api.resetData();
+                closeResetModal();
+                ui.clearSessionState();
+                form.reset();
+                if (result.profile) {
+                    ui.setFormValues(form, result.profile);
+                }
+                historyList.innerHTML = `<div class="rounded-[1.5rem] bg-slate-50 p-4 text-sm text-slate-500">No completed workouts yet. Finish a session to unlock history.</div>`;
+                prList.innerHTML = `<div class="rounded-[1.5rem] bg-slate-50 p-4 text-sm text-slate-500">No PRs yet. Lift consistently and they will appear here.</div>`;
+                ui.toast("All data cleared", "success");
+            } finally {
+                confirmResetButton.disabled = false;
+            }
+        });
+
         historyList.innerHTML = "";
         if (!history.sessions.length) {
             historyList.innerHTML = `<div class="rounded-[1.5rem] bg-slate-50 p-4 text-sm text-slate-500">No completed workouts yet. Finish a session to unlock history.</div>`;
         }
         history.sessions.forEach((session) => {
-            const totalVolume = session.sets.reduce((sum, set) => sum + ((set.weight_used || 0) * (set.actual_reps || 0)), 0);
+            const totalVolume = session.sets.reduce((sum, set) => sum + (set.weight_used || 0) * (set.actual_reps || 0), 0);
             const item = document.createElement("div");
             item.className = "rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4";
             item.innerHTML = `
@@ -308,12 +400,17 @@
                     </div>
                 </div>
                 <div class="mt-4 space-y-2">
-                    ${session.sets.slice(0, 4).map((set) => `
+                    ${session.sets
+                        .slice(0, 4)
+                        .map(
+                            (set) => `
                         <div class="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm">
                             <span class="font-semibold text-slate-800">${set.exercise_name} · Set ${set.set_number}</span>
                             <span class="text-slate-500">${set.weight_used || 0} kg × ${set.actual_reps || set.target_reps}</span>
                         </div>
-                    `).join("")}
+                    `
+                        )
+                        .join("")}
                 </div>
             `;
             historyList.appendChild(item);
@@ -359,7 +456,7 @@
 
         badge.textContent = "In session";
         document.getElementById("exercise-name").textContent = current.exercise_name;
-        document.getElementById("set-label").textContent = current.set_number;
+        document.getElementById("set-label").textContent = String((current.set_order || 0) + 1);
         document.getElementById("target-reps").textContent = current.target_reps;
         document.getElementById("set-complete-form").classList.remove("hidden");
         document.querySelector('#set-complete-form input[name="actual_reps"]').value = current.target_reps;
@@ -394,9 +491,13 @@
                 <label class="field">
                     <span>Day</span>
                     <select name="day_name">
-                        ${["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => `
+                        ${["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                            .map(
+                                (day) => `
                             <option value="${day}" ${values.day_name === day ? "selected" : ""}>${day}</option>
-                        `).join("")}
+                        `
+                            )
+                            .join("")}
                     </select>
                 </label>
                 <label class="field">
@@ -469,19 +570,21 @@
     }
 
     function collectWorkoutForm(form) {
-        const days = Array.from(document.querySelectorAll("#days-builder > section")).map((dayCard) => ({
-            day_name: dayCard.querySelector('[name="day_name"]').value,
-            category: dayCard.querySelector('[name="category"]').value,
-            exercises: Array.from(dayCard.querySelectorAll("[data-exercises] > div"))
-                .map((exerciseCard) => ({
-                    name: exerciseCard.querySelector('[name="exercise_name"]').value,
-                    rest_seconds: Number(exerciseCard.querySelector('[name="rest_seconds"]').value || 90),
-                    sets: Array.from(exerciseCard.querySelectorAll('[name="target_reps"]'))
-                        .map((input) => ({ target_reps: Number(input.value || 0) }))
-                        .filter((setItem) => setItem.target_reps > 0),
-                }))
-                .filter((exercise) => exercise.name && exercise.sets.length),
-        })).filter((day) => day.category && day.exercises.length);
+        const days = Array.from(document.querySelectorAll("#days-builder > section"))
+            .map((dayCard) => ({
+                day_name: dayCard.querySelector('[name="day_name"]').value,
+                category: dayCard.querySelector('[name="category"]').value,
+                exercises: Array.from(dayCard.querySelectorAll("[data-exercises] > div"))
+                    .map((exerciseCard) => ({
+                        name: exerciseCard.querySelector('[name="exercise_name"]').value,
+                        rest_seconds: Number(exerciseCard.querySelector('[name="rest_seconds"]').value || 90),
+                        sets: Array.from(exerciseCard.querySelectorAll('[name="target_reps"]'))
+                            .map((input) => ({ target_reps: Number(input.value || 0) }))
+                            .filter((setItem) => setItem.target_reps > 0),
+                    }))
+                    .filter((exercise) => exercise.name && exercise.sets.length),
+            }))
+            .filter((day) => day.category && day.exercises.length);
 
         return {
             name: form.elements.name.value,

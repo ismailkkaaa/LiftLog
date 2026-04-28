@@ -65,6 +65,14 @@ body {
     transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    box-shadow: none;
+}
+
 .primary-button {
     background: linear-gradient(135deg, #06b6d4, #0891b2);
     color: #ffffff;
@@ -74,6 +82,95 @@ body {
 .secondary-button {
     background: #e2e8f0;
     color: #0f172a;
+}
+
+.danger-zone {
+    border: 1px solid rgba(244, 63, 94, 0.18);
+    background: linear-gradient(180deg, #fff8f8 0%, #ffffff 100%);
+}
+
+.danger-button {
+    min-height: 3.5rem;
+    border: 1.5px solid #f43f5e;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #e11d48;
+    font-size: 0.95rem;
+    font-weight: 700;
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.danger-button:active {
+    transform: scale(0.98);
+}
+
+.danger-button-solid {
+    background: linear-gradient(135deg, #fb7185, #e11d48);
+    color: #ffffff;
+    box-shadow: 0 14px 30px rgba(244, 63, 94, 0.18);
+}
+
+.modal-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: end center;
+    padding: 1rem;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(6px);
+}
+
+.modal-card {
+    position: relative;
+    width: 100%;
+    max-width: 28rem;
+    border-radius: 2rem;
+    background: #ffffff;
+    padding: 1.5rem;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+    animation: rise 0.2s ease-out;
+}
+
+.workout-day-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 1.5rem;
+    background: #f8fafc;
+    padding: 1rem;
+    transition: transform 160ms ease, opacity 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.workout-day-card:not(.is-locked):active {
+    transform: scale(0.98);
+}
+
+.workout-day-card.is-locked {
+    border-color: #bbf7d0;
+    background: linear-gradient(180deg, #f0fdf4 0%, #f8fafc 100%);
+    opacity: 0.7;
+}
+
+.workout-day-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.workout-day-badge.is-complete {
+    background: #dcfce7;
+    color: #15803d;
 }
 
 .primary-button:active,

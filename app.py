@@ -25,6 +25,17 @@ def utc_now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
+WEEKDAY_INDEX = {
+    "Monday": 0,
+    "Tuesday": 1,
+    "Wednesday": 2,
+    "Thursday": 3,
+    "Friday": 4,
+    "Saturday": 5,
+    "Sunday": 6,
+}
+
+
 def get_db_connection() -> sqlite3.Connection:
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DATABASE_PATH)
@@ -59,7 +70,7 @@ def init_db() -> None:
     expected_columns = {
         "users": {"id", "name", "age", "height", "weight", "goal", "created_at", "updated_at"},
         "plans": {"id", "user_id", "plan_name", "notes", "created_at", "updated_at"},
-        "workout_days": {"id", "plan_id", "day_name", "category", "sort_order"},
+        "workout_days": {"id", "plan_id", "day_name", "category", "sort_order", "is_completed", "last_completed_date"},
         "exercises": {"id", "workout_day_id", "exercise_name", "rest_seconds", "sort_order"},
         "exercise_sets": {"id", "exercise_id", "target_reps", "completed_reps", "used_weight", "set_order", "completed"},
         "workout_sessions": {"id", "user_id", "workout_day_id", "started_at", "completed_at", "completed", "current_set_index", "status"},
@@ -99,7 +110,9 @@ def init_db() -> None:
         plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
         day_name TEXT NOT NULL,
         category TEXT NOT NULL,
-        sort_order INTEGER NOT NULL DEFAULT 0
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_completed INTEGER NOT NULL DEFAULT 0,
+        last_completed_date TEXT
     );
 
     CREATE TABLE IF NOT EXISTS exercises (
@@ -191,12 +204,112 @@ def init_db() -> None:
             current_columns = {
                 row["name"] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
             }
+            if table_name == "workout_days" and required_columns.issuperset(current_columns):
+                continue
             if current_columns != required_columns:
                 conn.execute(f"DROP TABLE IF EXISTS {table_name}")
         for legacy_table in legacy_tables:
             conn.execute(f"DROP TABLE IF EXISTS {legacy_table}")
         conn.executescript(schema)
+        migrate_schema(conn)
         conn.execute("PRAGMA foreign_keys = ON")
+        conn.commit()
+
+
+def migrate_schema(conn: sqlite3.Connection) -> None:
+    workout_day_columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(workout_days)").fetchall()
+    }
+    if "is_completed" not in workout_day_columns:
+        conn.execute("ALTER TABLE workout_days ADD COLUMN is_completed INTEGER NOT NULL DEFAULT 0")
+    if "last_completed_date" not in workout_day_columns:
+        conn.execute("ALTER TABLE workout_days ADD COLUMN last_completed_date TEXT")
+
+
+def parse_iso_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def next_scheduled_date_after(day_name: str, completed_on: date) -> date:
+    target_weekday = WEEKDAY_INDEX.get(day_name)
+    if target_weekday is None:
+        return completed_on + timedelta(days=7)
+    offset = (target_weekday - completed_on.weekday()) % 7
+    if offset == 0:
+        offset = 7
+    return completed_on + timedelta(days=offset)
+
+
+def should_unlock_workout_day(day_name: str, is_completed: int, last_completed_date: str | None, today: date | None = None) -> bool:
+    if not is_completed:
+        return False
+    completed_on = parse_iso_date(last_completed_date)
+    if not completed_on:
+        return True
+    current_day = today or date.today()
+    return current_day >= next_scheduled_date_after(day_name, completed_on)
+
+
+def apply_weekly_completion_resets(conn: sqlite3.Connection, user_id: int = DEFAULT_USER_ID, today: date | None = None) -> None:
+    current_day = today or date.today()
+    rows = conn.execute(
+        """
+        SELECT wd.id, wd.day_name, wd.is_completed, wd.last_completed_date
+        FROM workout_days wd
+        JOIN plans p ON p.id = wd.plan_id
+        WHERE p.user_id = ? AND wd.is_completed = 1
+        """,
+        (user_id,),
+    ).fetchall()
+    reset_ids = [
+        row["id"]
+        for row in rows
+        if should_unlock_workout_day(row["day_name"], row["is_completed"], row["last_completed_date"], today=current_day)
+    ]
+    if not reset_ids:
+        return
+    conn.executemany(
+        "UPDATE workout_days SET is_completed = 0 WHERE id = ?",
+        [(workout_day_id,) for workout_day_id in reset_ids],
+    )
+    conn.commit()
+
+
+def build_workout_day_state(row: sqlite3.Row | dict[str, Any], today: date | None = None) -> dict[str, Any]:
+    day = dict(row)
+    locked = not should_unlock_workout_day(
+        day["day_name"],
+        day.get("is_completed", 0),
+        day.get("last_completed_date"),
+        today=today,
+    ) and bool(day.get("is_completed"))
+    day["is_completed"] = bool(day.get("is_completed"))
+    day["is_locked"] = locked
+    day["completion_message"] = "Completed for this week" if locked else ""
+    return day
+
+
+def mark_workout_day_completed(conn: sqlite3.Connection, workout_day_id: int, completed_on: date) -> None:
+    conn.execute(
+        """
+        UPDATE workout_days
+        SET is_completed = 1, last_completed_date = ?
+        WHERE id = ?
+        """,
+        (completed_on.isoformat(), workout_day_id),
+    )
+
+
+def clear_all_user_data(user_id: int = DEFAULT_USER_ID) -> None:
+    with closing(get_db_connection()) as conn:
+        ensure_user_exists(conn, user_id)
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        ensure_user_exists(conn, user_id)
         conn.commit()
 
 
@@ -456,6 +569,7 @@ def serialize_plan(conn: sqlite3.Connection, plan_id: int) -> dict[str, Any]:
 
 
 def get_todays_workout_day(conn: sqlite3.Connection, user_id: int = DEFAULT_USER_ID) -> sqlite3.Row | None:
+    apply_weekly_completion_resets(conn, user_id=user_id)
     today_name = date.today().strftime("%A")
     return conn.execute(
         """
@@ -516,6 +630,7 @@ def create_or_resume_live_workout(
 ) -> dict[str, Any]:
     with closing(get_db_connection()) as conn:
         ensure_user_exists(conn, user_id)
+        apply_weekly_completion_resets(conn, user_id=user_id)
         if session_id is not None:
             existing = conn.execute(
                 "SELECT id FROM workout_sessions WHERE id = ? AND user_id = ?",
@@ -566,6 +681,8 @@ def create_or_resume_live_workout(
         ).fetchone()
         if not workout_day:
             raise ValueError("Workout day not found")
+        if build_workout_day_state(workout_day)["is_locked"]:
+            raise ValueError("Workout already completed for this week")
 
         exercise_rows = conn.execute(
             "SELECT * FROM exercises WHERE workout_day_id = ? ORDER BY sort_order, id",
@@ -631,12 +748,19 @@ def save_live_set(payload: dict[str, Any], user_id: int = DEFAULT_USER_ID) -> di
 
     with closing(get_db_connection()) as conn:
         ensure_user_exists(conn, user_id)
+        apply_weekly_completion_resets(conn, user_id=user_id)
         session = conn.execute(
             "SELECT * FROM workout_sessions WHERE id = ? AND user_id = ?",
             (session_id, user_id),
         ).fetchone()
         if not session:
             raise ValueError("Live workout session not found")
+        workout_day = conn.execute(
+            "SELECT id, day_name, is_completed, last_completed_date FROM workout_days WHERE id = ?",
+            (session["workout_day_id"],),
+        ).fetchone()
+        if workout_day and build_workout_day_state(workout_day)["is_locked"]:
+            raise ValueError("Workout already completed for this week")
 
         current_set = conn.execute(
             """
@@ -694,6 +818,8 @@ def save_live_set(payload: dict[str, Any], user_id: int = DEFAULT_USER_ID) -> di
                 session_id,
             ),
         )
+        if completed:
+            mark_workout_day_completed(conn, session["workout_day_id"], date.today())
         conn.commit()
 
         result = build_session_payload(conn, int(session_id))
@@ -821,10 +947,11 @@ def get_dashboard_data(user_id: int = DEFAULT_USER_ID) -> dict[str, Any]:
 
     with closing(get_db_connection()) as conn:
         ensure_user_exists(conn, user_id)
+        apply_weekly_completion_resets(conn, user_id=user_id)
         profile = row_to_dict(conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone())
         todays_workout = conn.execute(
             """
-            SELECT wd.id, wd.day_name, wd.category, p.plan_name AS workout_name
+            SELECT wd.id, wd.day_name, wd.category, wd.is_completed, wd.last_completed_date, p.plan_name AS workout_name
             FROM workout_days wd
             JOIN plans p ON p.id = wd.plan_id
             WHERE p.user_id = ? AND wd.day_name = ?
@@ -835,14 +962,7 @@ def get_dashboard_data(user_id: int = DEFAULT_USER_ID) -> dict[str, Any]:
         ).fetchone()
         day_cards = conn.execute(
             """
-            SELECT wd.id, wd.day_name, wd.category, p.plan_name AS workout_name,
-                   EXISTS(
-                       SELECT 1 FROM workout_sessions ws
-                       WHERE ws.workout_day_id = wd.id
-                       AND ws.user_id = ?
-                       AND ws.completed = 1
-                       AND DATE(ws.started_at) = DATE('now')
-                   ) AS completed_today
+            SELECT wd.id, wd.day_name, wd.category, wd.is_completed, wd.last_completed_date, p.plan_name AS workout_name
             FROM workout_days wd
             JOIN plans p ON p.id = wd.plan_id
             WHERE p.user_id = ?
@@ -856,7 +976,7 @@ def get_dashboard_data(user_id: int = DEFAULT_USER_ID) -> dict[str, Any]:
                 WHEN 'Sunday' THEN 7
             END, wd.sort_order
             """,
-            (user_id, user_id),
+            (user_id,),
         ).fetchall()
         completion_stats = conn.execute(
             """
@@ -891,8 +1011,8 @@ def get_dashboard_data(user_id: int = DEFAULT_USER_ID) -> dict[str, Any]:
         "success": True,
         "profile": profile,
         "today_name": today_name,
-        "todays_workout": row_to_dict(todays_workout),
-        "day_cards": [dict(row) for row in day_cards],
+        "todays_workout": build_workout_day_state(todays_workout) if todays_workout else None,
+        "day_cards": [build_workout_day_state(row) for row in day_cards],
         "weekly_progress": {
             "week_start": week_start.isoformat(),
             "week_end": week_end.isoformat(),
@@ -911,6 +1031,7 @@ def get_dashboard_data(user_id: int = DEFAULT_USER_ID) -> dict[str, Any]:
 def get_history_data(user_id: int = DEFAULT_USER_ID) -> dict[str, Any]:
     with closing(get_db_connection()) as conn:
         ensure_user_exists(conn, user_id)
+        apply_weekly_completion_resets(conn, user_id=user_id)
         sessions = conn.execute(
             """
             SELECT ws.id, ws.started_at, ws.completed_at, wd.day_name, wd.category, p.plan_name AS workout_name
@@ -1104,6 +1225,12 @@ def api_progress() -> Any:
 @app.get("/api/history")
 def api_history() -> Any:
     return jsonify(get_history_data())
+
+
+@app.post("/api/reset-data")
+def api_reset_data() -> Any:
+    clear_all_user_data()
+    return json_success(profile=get_profile(), message="All profile and training data cleared")
 
 
 @app.post("/api/body-weight")

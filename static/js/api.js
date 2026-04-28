@@ -32,6 +32,7 @@ window.LiftLogAPI = (() => {
             request("/api/live-set", { method: "POST", body: JSON.stringify({ ...payload, session_id: sessionId }) }),
         getProgress: () => request("/api/progress"),
         getHistory: () => request("/api/history"),
+        resetData: () => request("/api/reset-data", { method: "POST" }),
         logBodyWeight: (payload) => request("/api/body-weight", { method: "POST", body: JSON.stringify(payload) }),
     };
 })();
