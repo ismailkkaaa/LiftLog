@@ -150,15 +150,21 @@ body {
 }
 
 .workout-day-card.is-locked {
+    border-color: #cbd5e1;
+    background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.workout-day-card.is-completed {
     border-color: #bbf7d0;
     background: linear-gradient(180deg, #f0fdf4 0%, #f8fafc 100%);
-    opacity: 0.7;
+    opacity: 0.72;
 }
 
 .workout-day-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.35rem;
     min-height: 2rem;
     padding: 0.4rem 0.75rem;
     border-radius: 999px;
@@ -171,6 +177,16 @@ body {
 .workout-day-badge.is-complete {
     background: #dcfce7;
     color: #15803d;
+}
+
+.workout-day-badge.is-locked {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.workout-day-badge.is-available {
+    background: #cffafe;
+    color: #0e7490;
 }
 
 .primary-button:active,

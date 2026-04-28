@@ -4,7 +4,6 @@
 
     const page = document.querySelector("main[data-page]")?.dataset.page;
     let activeEditWorkoutId = null;
-    let restTimer = null;
 
     document.addEventListener("DOMContentLoaded", () => {
         if (page === "login") initLogin();
@@ -54,17 +53,23 @@
 
         if (data.todays_workout) {
             todayTitle.textContent = `${data.todays_workout.day_name} • ${data.todays_workout.category}`;
-            if (data.todays_workout.is_locked) {
-                todaySubtitle.textContent = "Completed for this week";
-                startButton.disabled = true;
-                startButton.textContent = "Completed for this week";
-            } else {
-                todaySubtitle.textContent = `${data.todays_workout.workout_name} is ready. Tap once and log each set live.`;
+            if (data.todays_workout.status === "AVAILABLE") {
+                todaySubtitle.textContent = `${data.todays_workout.workout_name} is available today.`;
+                startButton.textContent = "Start session";
+                startButton.disabled = false;
                 startButton.addEventListener("click", async () => {
                     const session = await api.startLiveWorkout(data.todays_workout.id);
                     ui.persistSessionState({ sessionId: session.session.id });
                     window.location.href = "/live-workout";
                 });
+            } else if (data.todays_workout.status === "COMPLETED") {
+                todaySubtitle.textContent = "Completed today";
+                startButton.textContent = "Completed";
+                startButton.disabled = true;
+            } else {
+                todaySubtitle.textContent = "This workout is locked";
+                startButton.textContent = "Locked";
+                startButton.disabled = true;
             }
         } else {
             startButton.disabled = true;
@@ -85,22 +90,24 @@
         }
         data.day_cards.forEach((day) => {
             const card = document.createElement("article");
-            card.className = `workout-day-card ${day.is_locked ? "is-locked" : ""}`;
+            card.className = `workout-day-card ${day.status === "LOCKED" ? "is-locked" : ""} ${day.status === "COMPLETED" ? "is-completed" : ""}`;
             card.innerHTML = `
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] ${day.is_locked ? "text-emerald-600" : "text-slate-500"}">${day.day_name}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] ${day.status === "AVAILABLE" ? "text-cyan-700" : day.status === "COMPLETED" ? "text-emerald-600" : "text-slate-500"}">${day.day_name}</p>
                         <p class="mt-2 text-lg font-bold text-slate-900">${day.category}</p>
                         <p class="mt-1 text-sm text-slate-500">${day.workout_name}</p>
                     </div>
-                    ${day.is_locked ? '<span class="workout-day-badge is-complete">Completed</span>' : ""}
+                    <span class="workout-day-badge ${day.status === "AVAILABLE" ? "is-available" : day.status === "COMPLETED" ? "is-complete" : "is-locked"}">
+                        ${day.status === "LOCKED" ? `${lockIconMarkup()}LOCKED` : day.status}
+                    </span>
                 </div>
-                <p class="mt-4 text-sm ${day.is_locked ? "text-emerald-700" : "text-slate-500"}">${day.is_locked ? "Completed for this week" : "Ready to train"}</p>
-                <button type="button" class="${day.is_locked ? "secondary-button" : "primary-button"} mt-4 w-full" ${day.is_locked ? "disabled" : ""}>
-                    ${day.is_locked ? "Completed for this week" : "Start workout"}
+                <p class="mt-4 text-sm ${day.status === "AVAILABLE" ? "text-cyan-700" : day.status === "COMPLETED" ? "text-emerald-700" : "text-slate-500"}">${dayStatusText(day)}</p>
+                <button type="button" class="${day.status === "AVAILABLE" ? "primary-button" : "secondary-button"} mt-4 w-full" ${day.status === "AVAILABLE" ? "" : "disabled"}>
+                    ${day.status === "AVAILABLE" ? "Start workout" : day.status === "COMPLETED" ? "Completed" : "Locked"}
                 </button>
             `;
-            if (!day.is_locked) {
+            if (day.status === "AVAILABLE") {
                 card.querySelector("button").addEventListener("click", async () => {
                     const session = await api.startLiveWorkout(day.id);
                     ui.persistSessionState({ sessionId: session.session.id });
@@ -125,7 +132,6 @@
             exercises: [
                 {
                     name: "Bench Press",
-                    rest_seconds: 90,
                     sets: [{ target_reps: 15 }, { target_reps: 12 }, { target_reps: 10 }],
                 },
             ],
@@ -202,7 +208,6 @@
         const blocked = document.getElementById("live-blocked");
         const panel = document.getElementById("live-panel");
         const form = document.getElementById("set-complete-form");
-        const skipRestButton = document.getElementById("skip-rest-button");
         const persisted = ui.readSessionState();
         let sessionId = persisted?.sessionId;
 
@@ -225,7 +230,7 @@
                 const current = await api.getCurrentSession();
                 sessionId = current.session?.id || current.session?.session?.id;
             } catch (error) {
-                if (error.message === "Workout already completed for this week") {
+                if (error.message === "This workout is locked") {
                     showBlocked(error.message);
                     return;
                 }
@@ -260,22 +265,14 @@
             if (details.session.status === "completed") {
                 ui.clearSessionState();
                 ui.toast("Workout complete", "success");
-                clearInterval(restTimer);
-                return;
             }
-            startRestTimer(90);
-        });
-
-        skipRestButton.addEventListener("click", () => {
-            clearInterval(restTimer);
-            document.getElementById("rest-panel").classList.add("hidden");
         });
 
         try {
             const details = await api.getSession(sessionId);
             renderSession(details);
         } catch (error) {
-            if (error.message === "Workout already completed for this week") {
+            if (error.message === "This workout is locked") {
                 showBlocked(error.message);
                 return;
             }
@@ -450,7 +447,6 @@
             document.getElementById("set-label").textContent = "Done";
             document.getElementById("target-reps").textContent = "0";
             document.getElementById("set-complete-form").classList.add("hidden");
-            document.getElementById("rest-panel").classList.add("hidden");
             return;
         }
 
@@ -460,23 +456,6 @@
         document.getElementById("target-reps").textContent = current.target_reps;
         document.getElementById("set-complete-form").classList.remove("hidden");
         document.querySelector('#set-complete-form input[name="actual_reps"]').value = current.target_reps;
-    }
-
-    function startRestTimer(seconds) {
-        clearInterval(restTimer);
-        const restPanel = document.getElementById("rest-panel");
-        const countdown = document.getElementById("rest-countdown");
-        let remaining = seconds;
-        restPanel.classList.remove("hidden");
-        countdown.textContent = `${remaining}s`;
-        restTimer = setInterval(() => {
-            remaining -= 1;
-            countdown.textContent = `${remaining}s`;
-            if (remaining <= 0) {
-                clearInterval(restTimer);
-                restPanel.classList.add("hidden");
-            }
-        }, 1000);
     }
 
     function addDayCard(container, values = {}) {
@@ -534,10 +513,6 @@
                 <span>Name</span>
                 <input name="exercise_name" type="text" value="${values.name || ""}" placeholder="Bench Press">
             </label>
-            <label class="field">
-                <span>Rest seconds</span>
-                <input name="rest_seconds" type="number" value="${values.rest_seconds || 90}" min="15" step="15">
-            </label>
             <div class="space-y-3" data-sets></div>
             <button type="button" class="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700" data-add-set>Add set</button>
         `;
@@ -577,7 +552,6 @@
                 exercises: Array.from(dayCard.querySelectorAll("[data-exercises] > div"))
                     .map((exerciseCard) => ({
                         name: exerciseCard.querySelector('[name="exercise_name"]').value,
-                        rest_seconds: Number(exerciseCard.querySelector('[name="rest_seconds"]').value || 90),
                         sets: Array.from(exerciseCard.querySelectorAll('[name="target_reps"]'))
                             .map((input) => ({ target_reps: Number(input.value || 0) }))
                             .filter((setItem) => setItem.target_reps > 0),
@@ -601,5 +575,19 @@
             weight: values.weight ? Number(values.weight) : null,
             goal: values.goal,
         };
+    }
+
+    function dayStatusText(day) {
+        if (day.status === "AVAILABLE") return "Available today";
+        if (day.status === "COMPLETED") return "Completed today";
+        return "Locked until its scheduled day";
+    }
+
+    function lockIconMarkup() {
+        return `
+            <svg viewBox="0 0 20 20" aria-hidden="true" class="h-3.5 w-3.5">
+                <path fill="currentColor" d="M6 8V6a4 4 0 1 1 8 0v2h1a1 1 0 0 1 1 1v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a1 1 0 0 1 1-1h1Zm2 0h4V6a2 2 0 1 0-4 0v2Z"/>
+            </svg>
+        `;
     }
 })();
