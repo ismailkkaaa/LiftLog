@@ -380,15 +380,30 @@ def save_workout_plan(payload: dict[str, Any], user_id: int = DEFAULT_USER_ID, p
 def load_workout_plan(plan_id: int | None = None, user_id: int = DEFAULT_USER_ID) -> dict[str, Any] | list[dict[str, Any]] | None:
     with closing(get_db_connection()) as conn:
         if plan_id is None:
-            plans = conn.execute(
-                "SELECT * FROM plans WHERE user_id = ? ORDER BY updated_at DESC, id DESC",
-                (user_id,),
-            ).fetchall()
-            return [serialize_plan(conn, row["id"]) for row in plans]
-        plan = conn.execute("SELECT * FROM plans WHERE id = ? AND user_id = ?", (plan_id, user_id)).fetchone()
-        if not plan:
-            return None
-        return serialize_plan(conn, plan_id)
+            return list_workout_plans(conn, user_id=user_id)
+        return get_workout_plan(conn, plan_id=plan_id, user_id=user_id)
+
+
+def list_workout_plans(conn: sqlite3.Connection, user_id: int = DEFAULT_USER_ID) -> list[dict[str, Any]]:
+    plans = conn.execute(
+        "SELECT id FROM plans WHERE user_id = ? ORDER BY updated_at DESC, id DESC",
+        (user_id,),
+    ).fetchall()
+    return [serialize_plan(conn, row["id"]) for row in plans]
+
+
+def get_workout_plan(conn: sqlite3.Connection, plan_id: int, user_id: int = DEFAULT_USER_ID) -> dict[str, Any] | None:
+    plan = conn.execute("SELECT id FROM plans WHERE id = ? AND user_id = ?", (plan_id, user_id)).fetchone()
+    if not plan:
+        return None
+    return serialize_plan(conn, plan_id)
+
+
+def delete_workout_plan(plan_id: int, user_id: int = DEFAULT_USER_ID) -> bool:
+    with closing(get_db_connection()) as conn:
+        cursor = conn.execute("DELETE FROM plans WHERE id = ? AND user_id = ?", (plan_id, user_id))
+        conn.commit()
+    return cursor.rowcount > 0
 
 
 def serialize_plan(conn: sqlite3.Connection, plan_id: int) -> dict[str, Any]:
@@ -955,6 +970,15 @@ def inject_app_shell() -> dict[str, Any]:
     return {"current_year": date.today().year}
 
 
+@app.after_request
+def add_cache_headers(response: Any) -> Any:
+    if request.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 @app.get("/")
 def home() -> str:
     return render_template("login.html", page_title="LiftLog | Welcome", active_page="login")
@@ -1035,11 +1059,8 @@ def api_update_workout(workout_id: int) -> Any:
 
 @app.delete("/api/workouts/<int:workout_id>")
 def api_delete_workout(workout_id: int) -> Any:
-    with closing(get_db_connection()) as conn:
-        cursor = conn.execute("DELETE FROM plans WHERE id = ? AND user_id = ?", (workout_id, DEFAULT_USER_ID))
-        conn.commit()
-        if cursor.rowcount == 0:
-            raise ValueError("Workout plan not found")
+    if not delete_workout_plan(workout_id, user_id=DEFAULT_USER_ID):
+        raise ValueError("Workout plan not found")
     return json_success()
 
 

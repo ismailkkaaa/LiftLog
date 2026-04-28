@@ -1,4 +1,4 @@
-const CACHE_NAME = "liftlog-v1";
+const CACHE_NAME = "liftlog-v2";
 const APP_ASSETS = [
     "/",
     "/dashboard",
@@ -33,6 +33,11 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
     if (event.request.method !== "GET") return;
+    const requestUrl = new URL(event.request.url);
+    if (requestUrl.pathname.startsWith("/api/")) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
     event.respondWith(
         caches.match(event.request).then((cached) => {
             if (cached) return cached;
