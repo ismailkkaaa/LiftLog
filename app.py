@@ -224,6 +224,41 @@ def migrate_schema(conn: sqlite3.Connection) -> None:
     if "last_completed_date" not in workout_day_columns:
         conn.execute("ALTER TABLE workout_days ADD COLUMN last_completed_date TEXT")
 
+    def remove_columns_from_table(table: str, cols_to_remove: list[str]) -> None:
+        # Safely remove columns by creating a new table without the unwanted columns and migrating data.
+        info = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        if not info:
+            return
+        existing_cols = [row["name"] for row in info]
+        keep_cols = [c for c in existing_cols if c not in cols_to_remove]
+        if len(keep_cols) == len(existing_cols):
+            return
+        # Build column definitions from PRAGMA info
+        col_defs = []
+        for row in info:
+            name = row["name"]
+            if name in cols_to_remove:
+                continue
+            typ = row["type"] or ""
+            notnull = " NOT NULL" if row["notnull"] else ""
+            dflt = f" DEFAULT {row['dflt_value']}" if row["dflt_value"] is not None else ""
+            pk = " PRIMARY KEY" if row["pk"] else ""
+            col_defs.append(f"{name} {typ}{notnull}{dflt}{pk}")
+        tmp_table = f"{table}__new"
+        conn.execute(f"CREATE TABLE {tmp_table} ({', '.join(col_defs)})")
+        conn.execute(f"INSERT INTO {tmp_table} ({', '.join(keep_cols)}) SELECT {', '.join(keep_cols)} FROM {table}")
+        conn.execute(f"DROP TABLE {table}")
+        conn.execute(f"ALTER TABLE {tmp_table} RENAME TO {table}")
+
+    # Remove legacy timer-related columns from tables if they exist
+    timer_cols = ["rest_seconds", "timer_duration", "countdown_state"]
+    for t in ("workout_sessions", "session_sets", "exercise_sets"):
+        try:
+            remove_columns_from_table(t, timer_cols)
+        except Exception:
+            # If migration fails for a table, skip to avoid breaking startup.
+            continue
+
 
 def parse_iso_date(value: str | None) -> date | None:
     if not value:

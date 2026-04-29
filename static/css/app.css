@@ -295,3 +295,15 @@ body {
         line-height: 1.05;
     }
 }
+
+/* Smooth transition for moving between sets */
+.set-panel-transition {
+    transition: transform 320ms cubic-bezier(.2,.9,.3,1), opacity 320ms;
+}
+
+/* Applied when switching sets to animate out; content will update while this is present */
+.set-panel-switching {
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+}

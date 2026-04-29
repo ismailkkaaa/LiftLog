@@ -436,26 +436,43 @@
         const badge = document.getElementById("live-status-badge");
         const progressBar = document.getElementById("live-progress-bar");
         const progressText = document.getElementById("live-progress-text");
+        const panel = document.getElementById("set-panel");
 
         document.getElementById("live-workout-name").textContent = `${details.session.day_name} • ${details.session.category}`;
         progressBar.style.width = `${details.progress}%`;
         progressText.textContent = `${details.progress}% done`;
 
-        if (!current) {
-            badge.textContent = "Completed";
-            document.getElementById("exercise-name").textContent = "Workout complete";
-            document.getElementById("set-label").textContent = "Done";
-            document.getElementById("target-reps").textContent = "0";
-            document.getElementById("set-complete-form").classList.add("hidden");
-            return;
-        }
+        const applyContent = () => {
+            if (!current) {
+                badge.textContent = "Completed";
+                document.getElementById("exercise-name").textContent = "Workout complete";
+                document.getElementById("set-label").textContent = "Done";
+                document.getElementById("target-reps").textContent = "0";
+                document.getElementById("set-complete-form").classList.add("hidden");
+                return;
+            }
 
-        badge.textContent = "In session";
-        document.getElementById("exercise-name").textContent = current.exercise_name;
-        document.getElementById("set-label").textContent = String((current.set_order || 0) + 1);
-        document.getElementById("target-reps").textContent = current.target_reps;
-        document.getElementById("set-complete-form").classList.remove("hidden");
-        document.querySelector('#set-complete-form input[name="actual_reps"]').value = current.target_reps;
+            badge.textContent = "In session";
+            document.getElementById("exercise-name").textContent = current.exercise_name;
+            document.getElementById("set-label").textContent = String((current.set_order || 0) + 1);
+            document.getElementById("target-reps").textContent = current.target_reps;
+            document.getElementById("set-complete-form").classList.remove("hidden");
+            document.querySelector('#set-complete-form input[name="actual_reps"]').value = current.target_reps;
+        };
+
+        // Animate a short transition between sets for a smooth UX
+        if (panel) {
+            // animate out
+            panel.classList.add("set-panel-switching");
+            // after the out animation, update content and animate in
+            setTimeout(() => {
+                applyContent();
+                // next frame remove switching class so CSS transition animates entry
+                requestAnimationFrame(() => panel.classList.remove("set-panel-switching"));
+            }, 220);
+        } else {
+            applyContent();
+        }
     }
 
     function addDayCard(container, values = {}) {
