@@ -5,8 +5,13 @@
     const page = document.querySelector("main[data-page]")?.dataset.page;
     let activeEditWorkoutId = null;
 
+    // Prevent double initialization across hot reloads / duplicate script loads
+    if (window.appInitialized) return;
+    window.appInitialized = true;
+
     document.addEventListener("DOMContentLoaded", () => {
-        // Remove any legacy sample data stored in localStorage
+        // Sanitize localStorage and remove known demo keys (non-destructive)
+        try { ui.sanitizeLocalStorage?.(); } catch (e) { console.debug('sanitizeLocalStorage failed', e); }
         ui.clearSampleLocalStorage?.();
 
         if (page === "login") initLogin();
@@ -43,8 +48,13 @@
         const completionRate = document.getElementById("completion-rate");
         const dayGrid = document.getElementById("day-card-grid");
         const emptyState = document.getElementById("dashboard-empty");
-        const startButton = document.getElementById("start-todays-workout");
-        const resumeButton = document.getElementById("resume-workout-button");
+        // Clone buttons to ensure there are no duplicate event listeners from prior initializations
+        const _startOrig = document.getElementById("start-todays-workout");
+        const startButton = _startOrig ? _startOrig.cloneNode(true) : null;
+        if (_startOrig && _startOrig.parentNode && startButton) _startOrig.parentNode.replaceChild(startButton, _startOrig);
+        const _resumeOrig = document.getElementById("resume-workout-button");
+        const resumeButton = _resumeOrig ? _resumeOrig.cloneNode(true) : null;
+        if (_resumeOrig && _resumeOrig.parentNode && resumeButton) _resumeOrig.parentNode.replaceChild(resumeButton, _resumeOrig);
 
         greeting.textContent = data.profile?.name ? `Welcome back, ${data.profile.name}` : "Welcome back";
         weeklyTarget.textContent = `${data.weekly_progress.completed_this_week}/${data.weekly_progress.target}`;

@@ -55,6 +55,43 @@ window.LiftLogUI = (() => {
         ].forEach((k) => localStorage.removeItem(k));
     }
 
+    function sanitizeLocalStorage() {
+        // Non-destructive validation of JSON entries used by app
+        try {
+            const keysToCheck = ['liftlog.activeSession'];
+            keysToCheck.forEach((k) => {
+                const raw = localStorage.getItem(k);
+                if (!raw) return;
+                try {
+                    JSON.parse(raw);
+                } catch (e) {
+                    localStorage.removeItem(k);
+                }
+            });
+
+            // Remove any duplicate demo-like keys
+            ['demo_workout', 'liftlog.demo', 'liftlog.samplePlan', 'liftlog.defaultPlan'].forEach(k => localStorage.removeItem(k));
+
+            // Ensure no duplicate items in a hypothetical workouts list
+            const maybeList = localStorage.getItem('liftlog.workouts');
+            if (maybeList) {
+                try {
+                    const arr = JSON.parse(maybeList);
+                    if (Array.isArray(arr)) {
+                        const uniq = Array.from(new Map(arr.map(i => [i && i.id ? i.id : JSON.stringify(i), i])).values());
+                        localStorage.setItem('liftlog.workouts', JSON.stringify(uniq));
+                    } else {
+                        localStorage.removeItem('liftlog.workouts');
+                    }
+                } catch (e) {
+                    localStorage.removeItem('liftlog.workouts');
+                }
+            }
+        } catch (e) {
+            console.debug('sanitizeLocalStorage error', e);
+        }
+    }
+
     async function clearAllClientStorage() {
         try {
             // Clear all localStorage (keep only keys needed?) — for now clear known keys plus others
@@ -105,6 +142,7 @@ window.LiftLogUI = (() => {
         readSessionState,
         clearSessionState,
         clearSampleLocalStorage,
+        sanitizeLocalStorage,
         clearAllClientStorage,
         formatDateTime,
     };
