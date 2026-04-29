@@ -1,4 +1,4 @@
-const CACHE_NAME = "liftlog-v2";
+const CACHE_NAME = "liftlog-v3";
 const APP_ASSETS = [
     "/",
     "/dashboard",
@@ -13,22 +13,34 @@ const APP_ASSETS = [
     "/static/js/app.js",
     "/static/js/pwa.js",
     "/static/manifest.json",
-    "/static/images/icon-192.svg",
-    "/static/images/icon-512.svg",
+    "/static/images/icon-192-v2.png",
+    "/static/images/icon-512-v2.png",
 ];
 
 self.addEventListener("install", (event) => {
+    // Force reload resources to ensure new icons are fetched
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_ASSETS))
+        caches.open(CACHE_NAME).then(async (cache) => {
+            // Use Request with cache: 'reload' to bypass HTTP cache where supported
+            const requests = APP_ASSETS.map((url) => new Request(url, { cache: 'reload' }));
+            await cache.addAll(requests);
+        })
     );
+    self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
-            Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+            Promise.all(
+                keys
+                    .filter((key) => key !== CACHE_NAME)
+                    .map((key) => caches.delete(key))
+            )
         )
     );
+    // Claim clients so the new service worker takes control immediately
+    self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
@@ -42,6 +54,8 @@ self.addEventListener("fetch", (event) => {
         caches.match(event.request).then((cached) => {
             if (cached) return cached;
             return fetch(event.request).then((response) => {
+                // Only cache successful responses
+                if (!response || response.status !== 200 || response.type === 'opaque') return response;
                 const cloned = response.clone();
                 caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
                 return response;
