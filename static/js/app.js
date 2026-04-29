@@ -8,6 +8,7 @@
     // Prevent double initialization across hot reloads / duplicate script loads
     if (window.appInitialized) return;
     window.appInitialized = true;
+    console.info('App initialized');
 
     document.addEventListener("DOMContentLoaded", () => {
         // Sanitize localStorage and remove known demo keys (non-destructive)

@@ -3,10 +3,7 @@ if ("serviceWorker" in navigator) {
         try {
             const reg = await navigator.serviceWorker.register("/sw.js");
 
-            // If waiting worker exists, instruct it to skip waiting so activation happens
-            if (reg.waiting) {
-                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
+            console.info('Service worker registered at', reg.scope);
 
             // Listen for updates found (new worker installing)
             reg.addEventListener('updatefound', () => {
@@ -14,40 +11,57 @@ if ("serviceWorker" in navigator) {
                 if (!installing) return;
                 installing.addEventListener('statechange', () => {
                     if (installing.state === 'installed') {
-                        // New content is available; request it activate now
-                        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        // New content is available; notify user (do NOT auto-activate)
+                        console.info('Service worker state: installed (update available)');
+                        try { showUpdateUIBanner(); } catch (e) { console.debug('showUpdateUIBanner failed', e); }
                     }
                 });
             });
 
-            // If controller changes (new SW took control), reload to use new assets
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                // Avoid multiple reloads
-                if (window.__swReloading) return;
-                window.__swReloading = true;
-                window.location.reload(true);
-            });
+            // If controller changes (new SW took control), show update banner (do not auto-reload)
+            if (!window.__swListenersAdded) {
+                window.__swListenersAdded = true;
 
-            // If there is an active controller, ask it to clear stale caches (best-effort)
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_SITE_DATA' });
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.info('service worker controller changed');
+                    // Show update banner once
+                    try { showUpdateUIBanner(); } catch (e) { console.debug('showUpdateUIBanner failed', e); }
+                });
+
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    const data = event.data || {};
+                    if (data && data.type === 'CLIENT_CLEAR_SITE_DATA') {
+                        // SW requests clients to clear local storage and indexedDB
+                        try { window.LiftLogUI?.clearAllClientStorage?.(); } catch (e) { console.debug('clearAllClientStorage failed', e); }
+                        // Acknowledge to SW
+                        if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'CLIENT_CLEAR_SITE_DATA_ACK' });
+                    }
+
+                    if (data && data.type === 'NEW_VERSION_AVAILABLE') {
+                        console.info('New app version available');
+                        try { showUpdateUIBanner(); } catch (e) { console.debug('showUpdateUIBanner failed', e); }
+                    }
+                });
+
+
             }
 
-            navigator.serviceWorker.addEventListener('message', (event) => {
-                const data = event.data || {};
-                if (data && data.type === 'CLIENT_CLEAR_SITE_DATA') {
-                    // SW requests clients to clear local storage and indexedDB
-                    try { window.LiftLogUI?.clearAllClientStorage?.(); } catch (e) { console.debug('clearAllClientStorage failed', e); }
-                    // Acknowledge to SW
-                    if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'CLIENT_CLEAR_SITE_DATA_ACK' });
-                }
-
-                if (data && data.type === 'NEW_VERSION_AVAILABLE') {
-                    // auto-reload when new version is activated
-                    console.info('New app version available, reloading...');
-                    try { window.__swReloading = true; window.location.reload(true); } catch (e) { console.debug('reload failed', e); }
-                }
-            });
+            function showUpdateUIBanner() {
+                if (document.getElementById('update-banner')) return;
+                const banner = document.createElement('div');
+                banner.id = 'update-banner';
+                banner.style = 'position:fixed;left:0;right:0;top:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;background:#075985;color:#fff;font-weight:700;gap:8px';
+                banner.innerHTML = '<span>New update available</span>';
+                const btn = document.createElement('button');
+                btn.textContent = 'Refresh';
+                btn.style = 'background:#fff;color:#075985;border-radius:8px;padding:6px 10px;font-weight:700;border:none;cursor:pointer';
+                btn.addEventListener('click', () => {
+                    try { navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' }); } catch (e) { console.debug(e); }
+                    setTimeout(() => location.reload(), 200); // user-initiated; safe single reload
+                });
+                banner.appendChild(btn);
+                document.body.appendChild(banner);
+            }
         } catch (e) {
             // keep app usable when service workers are unavailable
             console.debug('SW registration failed', e);

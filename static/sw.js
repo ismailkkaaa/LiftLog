@@ -1,4 +1,4 @@
-const CACHE_NAME = "liftlog-v5";
+const CACHE_NAME = "liftlog-v3"; // updated cache version (safe upgrade)
 const APP_ASSETS = [
     "/",
     "/dashboard",
@@ -22,8 +22,10 @@ self.addEventListener("install", (event) => {
         caches.open(CACHE_NAME).then(async (cache) => {
             const requests = APP_ASSETS.map((url) => new Request(url, { cache: 'reload' }));
             await cache.addAll(requests);
+            console.log('Service Worker: pre-cached assets', CACHE_NAME);
         })
     );
+    // Activate as soon as installed
     self.skipWaiting();
 });
 
@@ -34,6 +36,7 @@ self.addEventListener("activate", (event) => {
                 keys.map((key) => {
                     // Delete older liftlog caches (different version names)
                     if (key !== CACHE_NAME && key.startsWith('liftlog-')) {
+                        console.log('Service Worker: deleting old cache', key);
                         return caches.delete(key);
                     }
                     return Promise.resolve(true);
@@ -43,10 +46,11 @@ self.addEventListener("activate", (event) => {
             // Claim clients so the new service worker takes control immediately
             return self.clients.claim();
         }).then(() => {
-            // Notify clients that a new version is active
+            // Notify clients that a new version is active (informative only)
             self.clients.matchAll().then((clients) => {
                 clients.forEach((client) => client.postMessage({ type: 'NEW_VERSION_AVAILABLE' }));
             });
+            console.log('Service Worker: activated', CACHE_NAME);
         })
     );
 });
@@ -90,7 +94,10 @@ self.addEventListener("fetch", (event) => {
             fetch(event.request).then((response) => {
                 if (response && response.status === 200) {
                     const copy = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, copy);
+                        console.debug('Service Worker: cached app asset', event.request.url);
+                    });
                 }
                 return response;
             }).catch(() => caches.match(event.request).then((r) => r || caches.match('/')))
@@ -105,7 +112,10 @@ self.addEventListener("fetch", (event) => {
             return fetch(event.request).then((response) => {
                 if (!response || response.status !== 200) return response;
                 const cloned = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(event.request, cloned);
+                    console.debug('Service Worker: cached resource', event.request.url);
+                });
                 return response;
             }).catch(() => caches.match('/'));
         })

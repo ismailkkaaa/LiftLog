@@ -122,8 +122,8 @@ window.LiftLogUI = (() => {
                 navigator.serviceWorker.controller.postMessage({ type: 'CLIENT_CLEAR_SITE_DATA_ACK' });
             }
 
-            // Reload to ensure fresh assets are fetched
-            setTimeout(() => location.reload(true), 350);
+            // Do not auto-reload here — let the user control refresh to avoid loops
+            console.debug('clearAllClientStorage completed — no auto-reload triggered');
         } catch (e) {
             console.warn('Failed to clear client storage', e);
         }
