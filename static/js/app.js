@@ -6,6 +6,9 @@
     let activeEditWorkoutId = null;
 
     document.addEventListener("DOMContentLoaded", () => {
+        // Remove any legacy sample data stored in localStorage
+        ui.clearSampleLocalStorage?.();
+
         if (page === "login") initLogin();
         if (page === "dashboard") initDashboard();
         if (page === "workout_creator") initWorkoutCreator();

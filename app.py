@@ -259,6 +259,27 @@ def migrate_schema(conn: sqlite3.Connection) -> None:
             # If migration fails for a table, skip to avoid breaking startup.
             continue
 
+    # Remove common demo/sample workout plans that may have been bundled with older releases
+    try:
+        demo_names = [
+            'push pull legs',
+            'plan a',
+            'simple workout',
+            'demo',
+            'sample workout',
+            'test plan',
+            'default plan'
+        ]
+        placeholders = ','.join('?' for _ in demo_names)
+        conn.execute(
+            f"DELETE FROM plans WHERE LOWER(plan_name) IN ({placeholders})",
+            tuple(demo_names),
+        )
+        # Cascading deletes via foreign keys will remove workout_days, exercises, sets, etc.
+    except Exception:
+        # Do not raise migration errors for demo cleanup
+        pass
+
 
 def parse_iso_date(value: str | None) -> date | None:
     if not value:

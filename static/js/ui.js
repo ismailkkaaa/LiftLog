@@ -44,6 +44,17 @@ window.LiftLogUI = (() => {
         localStorage.removeItem(sessionKey);
     }
 
+    function clearSampleLocalStorage() {
+        // Remove known legacy sample/demo localStorage keys if present
+        [
+            'liftlog.demoPlan',
+            'liftlog.samplePlan',
+            'liftlog.defaultPlan',
+            'liftlog.demo',
+            'demo_workout',
+        ].forEach((k) => localStorage.removeItem(k));
+    }
+
     function formatDateTime(value) {
         if (!value) return "";
         return new Date(value).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -56,6 +67,7 @@ window.LiftLogUI = (() => {
         persistSessionState,
         readSessionState,
         clearSessionState,
+        clearSampleLocalStorage,
         formatDateTime,
     };
 })();
