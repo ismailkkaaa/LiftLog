@@ -84,13 +84,25 @@
             });
         }
 
+        // Clear container to avoid duplicates and ensure clean layout
         dayGrid.innerHTML = "";
+        const seen = new Set();
         if (!data.day_cards.length) {
             emptyState.classList.remove("hidden");
+        } else {
+            emptyState.classList.add("hidden");
         }
+
+        // Ensure container uses responsive grid class (defined in CSS)
+        dayGrid.classList.add('weekly-grid');
+
         data.day_cards.forEach((day) => {
+            if (!day || seen.has(day.id)) return;
+            seen.add(day.id);
+
             const card = document.createElement("article");
             card.className = `workout-day-card ${day.status === "LOCKED" ? "is-locked" : ""} ${day.status === "COMPLETED" ? "is-completed" : ""}`;
+            card.style.width = '100%';
             card.innerHTML = `
                 <div class="flex items-start justify-between gap-3">
                     <div>
@@ -107,13 +119,16 @@
                     ${day.status === "AVAILABLE" ? "Start workout" : day.status === "COMPLETED" ? "Completed" : "Locked"}
                 </button>
             `;
+
             if (day.status === "AVAILABLE") {
-                card.querySelector("button").addEventListener("click", async () => {
+                const btn = card.querySelector("button");
+                btn.addEventListener("click", async () => {
                     const session = await api.startLiveWorkout(day.id);
                     ui.persistSessionState({ sessionId: session.session.id });
                     window.location.href = "/live-workout";
                 });
             }
+
             dayGrid.appendChild(card);
         });
     }
