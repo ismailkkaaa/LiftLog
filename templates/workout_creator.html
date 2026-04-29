@@ -3,37 +3,72 @@
 <section class="space-y-5 animate-rise">
     <header>
         <p class="text-sm font-medium text-slate-500">Workout Plan Creator</p>
-        <h1 class="mt-1 text-3xl font-extrabold text-slate-900">Build your weekly split</h1>
+        <h1 class="mt-1 text-3xl font-extrabold text-slate-900">Quick Builder</h1>
     </header>
 
-    <form id="workout-form" class="space-y-5">
-        <div class="panel space-y-4">
+    <form id="workout-form" class="space-y-4">
+        <div class="panel space-y-3">
+            <div class="flex items-center justify-between">
+                <label class="field flex-1 mr-3">
+                    <span>Plan name</span>
+                    <input name="name" type="text" placeholder="Push Pull Legs" required>
+                </label>
+                <div class="w-36">
+                    <button id="open-templates" type="button" class="secondary-button w-full">Templates</button>
+                </div>
+            </div>
             <label class="field">
-                <span>Plan name</span>
-                <input name="name" type="text" placeholder="Push Pull Legs" required>
-            </label>
-            <label class="field">
-                <span>Notes</span>
-                <textarea name="notes" rows="3" placeholder="Keep it simple, recover well, progress steadily."></textarea>
+                <span>Notes (optional)</span>
+                <input name="notes" type="text" placeholder="Short reminder, e.g. 3x week" />
             </label>
         </div>
 
-        <div id="days-builder" class="space-y-4"></div>
+        <div id="days-builder" class="space-y-3">
+            <!-- Mobile-first day selector and editor will be injected here -->
+        </div>
+
+        <div class="panel">
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="text-lg font-bold text-slate-900">Quick Exercises</h2>
+                <div class="text-sm text-slate-500">Tap to add</div>
+            </div>
+            <div id="exercise-chips" class="flex flex-wrap gap-2"></div>
+            <div class="mt-3">
+                <input id="exercise-search" type="search" class="field" placeholder="Search exercises or add custom" />
+            </div>
+            <div class="mt-3 flex gap-2" id="rep-presets">
+                <button type="button" class="secondary-button">Strength</button>
+                <button type="button" class="secondary-button">Hypertrophy</button>
+                <button type="button" class="secondary-button">Endurance</button>
+            </div>
+        </div>
 
         <div class="flex gap-3">
-            <button id="add-day-button" type="button" class="secondary-button flex-1">Add workout day</button>
+            <button id="preview-button" type="button" class="secondary-button flex-1">Preview</button>
             <button type="submit" class="primary-button flex-1">Save plan</button>
         </div>
     </form>
 
     <section class="panel">
-        <div class="mb-4 flex items-center justify-between">
-            <div>
-                <h2 class="text-xl font-bold text-slate-900">Saved plans</h2>
-                <p class="text-sm text-slate-500">Edit or remove existing workout structures.</p>
+        <h2 class="text-lg font-bold text-slate-900">Saved plans</h2>
+        <div id="saved-workouts" class="space-y-3 mt-3"></div>
+    </section>
+
+    <!-- Templates bottom sheet -->
+    <div id="templates-sheet" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop"></div>
+        <div class="modal-card">
+            <h3 class="text-lg font-bold">Workout templates</h3>
+            <div id="template-list" class="mt-3 space-y-2">
+                <button class="primary-button w-full" data-template="push-pull-legs">Push Pull Legs</button>
+                <button class="primary-button w-full" data-template="arnold-split">Arnold Split</button>
+                <button class="primary-button w-full" data-template="bro-split">Bro Split</button>
+                <button class="primary-button w-full" data-template="upper-lower">Upper Lower</button>
+            </div>
+            <div class="mt-3 text-right">
+                <button data-close-modal class="secondary-button">Close</button>
             </div>
         </div>
-        <div id="saved-workouts" class="space-y-3"></div>
-    </section>
+    </div>
 </section>
 {% endblock %}

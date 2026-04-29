@@ -118,57 +118,220 @@
         });
     }
 
+
+
     async function initWorkoutCreator() {
         const builder = document.getElementById("days-builder");
         const form = document.getElementById("workout-form");
-        const addDayButton = document.getElementById("add-day-button");
         const savedWorkouts = document.getElementById("saved-workouts");
+        const exerciseChips = document.getElementById("exercise-chips");
+        const exerciseSearch = document.getElementById("exercise-search");
+        const templatesSheet = document.getElementById("templates-sheet");
 
-        addDayButton.addEventListener("click", () => addDayCard(builder));
-        form.addEventListener("submit", submitWorkoutForm);
-        addDayCard(builder, {
-            day_name: "Monday",
-            category: "Chest",
-            exercises: [
-                {
-                    name: "Bench Press",
-                    sets: [{ target_reps: 15 }, { target_reps: 12 }, { target_reps: 10 }],
-                },
-            ],
-        });
-        await renderSavedWorkouts();
+        const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        const EXERCISES = ["Bench Press","Incline Press","Pushups","Cable Fly","Pec Deck","Squat","Deadlift","Overhead Press","Barbell Row","Lat Pulldown"];
+        const REP_PRESETS = {
+            Strength: "5,5,5,5",
+            Hypertrophy: "12,10,8,6",
+            Endurance: "15,15,12,12",
+        };
 
-        async function submitWorkoutForm(event) {
-            event.preventDefault();
-            const payload = collectWorkoutForm(form);
-            if (!payload.days.length) {
-                ui.toast("Add at least one workout day", "error");
-                return;
-            }
-            if (activeEditWorkoutId) {
-                await api.updateWorkout(activeEditWorkoutId, payload);
-                ui.toast("Workout plan updated", "success");
-            } else {
-                await api.createWorkout(payload);
-                ui.toast("Workout plan saved", "success");
-            }
-            activeEditWorkoutId = null;
-            form.reset();
-            builder.innerHTML = "";
-            addDayCard(builder);
-            await renderSavedWorkouts();
+        const state = { days: {} };
+        let selectedDay = DAYS[0];
+        DAYS.forEach((d) => (state.days[d] = { day_name: d, category: "", exercises: [] }));
+
+        function renderDayTabs() {
+            const tabs = document.createElement("div");
+            tabs.className = "day-tabs";
+            DAYS.forEach((d) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = `day-tab ${d === selectedDay ? "active" : ""}`;
+                btn.textContent = d.slice(0,3).toUpperCase();
+                btn.addEventListener("click", () => { selectedDay = d; render(); });
+                tabs.appendChild(btn);
+            });
+            return tabs;
         }
 
-        async function renderSavedWorkouts() {
-            const { workouts } = await api.getWorkouts();
-            savedWorkouts.innerHTML = "";
-            if (!workouts.length) {
-                savedWorkouts.innerHTML = `<div class="rounded-[1.5rem] bg-slate-50 p-4 text-sm text-slate-500">No workout plans yet. Create your first split above.</div>`;
-                return;
+        function render() {
+            builder.innerHTML = "";
+            const tabs = renderDayTabs();
+            builder.appendChild(tabs);
+
+            const card = document.createElement("div");
+            card.className = "day-card mt-3";
+
+            const catLabel = document.createElement("label");
+            catLabel.className = "field";
+            catLabel.innerHTML = `<span>Category</span>`;
+            const catInput = document.createElement("input");
+            catInput.value = state.days[selectedDay].category || "";
+            catInput.placeholder = "Chest";
+            catInput.addEventListener("input", () => (state.days[selectedDay].category = catInput.value));
+            catLabel.appendChild(catInput);
+            card.appendChild(catLabel);
+
+            const list = document.createElement("div");
+            list.className = "mt-3 space-y-2";
+            state.days[selectedDay].exercises.forEach((ex, idx) => {
+                const exWrap = document.createElement("div");
+                exWrap.className = "rounded-lg p-3 bg-slate-50 flex items-start justify-between gap-3";
+                exWrap.innerHTML = `
+                    <div>
+                        <div class="font-bold">${ex.exercise_name}</div>
+                        <div class="text-sm text-slate-500">Sets: ${ex.sets.length} • Reps: ${ex.sets.map(s=>s.target_reps).join(",")}</div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button class="secondary-button" data-action="edit">Edit</button>
+                        <button class="danger-button" data-action="remove">Remove</button>
+                    </div>
+                `;
+                exWrap.querySelector('[data-action="edit"]').addEventListener("click", () => openExerciseEditor(selectedDay, idx));
+                exWrap.querySelector('[data-action="remove"]').addEventListener("click", () => { state.days[selectedDay].exercises.splice(idx,1); render(); });
+                list.appendChild(exWrap);
+            });
+            card.appendChild(list);
+
+            const addBtn = document.createElement("button");
+            addBtn.type = "button";
+            addBtn.className = "primary-button w-full mt-3";
+            addBtn.textContent = "+ Add Exercise";
+            addBtn.addEventListener("click", () => { exerciseSearch.focus(); });
+            card.appendChild(addBtn);
+
+            builder.appendChild(card);
+        }
+
+        function openExerciseEditor(dayName, index) {
+            const ex = state.days[dayName].exercises[index];
+            const modal = document.createElement("div");
+            modal.className = "modal-shell";
+            modal.innerHTML = `
+                <div class="modal-backdrop"></div>
+                <div class="modal-card">
+                    <h3 class="text-lg font-bold">Edit ${ex.exercise_name}</h3>
+                    <label class="field mt-3"><span>Sets</span><input type="number" id="_sets_count" value="${ex.sets.length}" min="1"/></label>
+                    <label class="field mt-2"><span>Rep pattern (comma separated)</span><input id="_rep_pattern" value="${ex.sets.map(s=>s.target_reps).join(',')}"/></label>
+                    <div class="mt-3 text-right"><button class="secondary-button" id="_cancel">Cancel</button> <button class="primary-button" id="_save">Save</button></div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.querySelector('#_cancel').addEventListener('click', () => modal.remove());
+            modal.querySelector('#_save').addEventListener('click', () => {
+                const setsCount = parseInt(modal.querySelector('#_sets_count').value||'0',10)||1;
+                const pattern = modal.querySelector('#_rep_pattern').value.split(',').map(s=>parseInt(s.trim()||'0',10)||0).filter(n=>n>0);
+                const sets = pattern.length ? pattern.slice(0, setsCount) : Array.from({length:setsCount}).map(()=>ex.sets[0]?.target_reps||12);
+                state.days[dayName].exercises[index].sets = sets.map((r,i)=>({target_reps: r, set_order: i}));
+                modal.remove();
+                render();
+            });
+        }
+
+        function addExerciseToDay(name, opts={}){
+            const pattern = (state.lastPreset || opts.repPattern || '12,10,8,6').split(',').map(s=>parseInt(s.trim()||'0',10)).filter(n=>n>0);
+            const count = opts.sets || pattern.length || 3;
+            const finalSets = pattern.length ? pattern.slice(0,count) : Array.from({length:count}).map(()=>12);
+            state.days[selectedDay].exercises.push({exercise_name: name, sets: finalSets.map((r,i)=>({target_reps:r,set_order:i}))});
+            render();
+        }
+
+        function renderChips(){
+            exerciseChips.innerHTML = "";
+            EXERCISES.forEach((name)=>{
+                const c = document.createElement('button');
+                c.type='button';
+                c.className='exercise-chip';
+                c.textContent=name;
+                c.addEventListener('click', ()=> addExerciseToDay(name));
+                exerciseChips.appendChild(c);
+            });
+        }
+        exerciseSearch.addEventListener('keydown',(e)=>{
+            if(e.key==='Enter'){
+                e.preventDefault();
+                const val = exerciseSearch.value.trim();
+                if(!val) return;
+                addExerciseToDay(val);
+                exerciseSearch.value='';
             }
-            workouts.forEach((workout) => {
-                const item = document.createElement("div");
-                item.className = "rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4";
+        });
+
+        document.getElementById('rep-presets').addEventListener('click',(e)=>{
+            if(e.target.tagName==='BUTTON'){
+                const preset = e.target.textContent.trim();
+                const pattern = REP_PRESETS[preset] || '12,10,8,6';
+                state.lastPreset = pattern;
+                ui.toast(`${preset} pattern applied`);
+            }
+        });
+
+        document.getElementById('open-templates').addEventListener('click',()=>{
+            templatesSheet.classList.remove('hidden');
+            templatesSheet.setAttribute('aria-hidden','false');
+        });
+        templatesSheet.querySelectorAll('[data-close-modal]').forEach(el=>el.addEventListener('click',()=>{templatesSheet.classList.add('hidden');templatesSheet.setAttribute('aria-hidden','true');}));
+        templatesSheet.querySelectorAll('[data-template]').forEach(btn=>btn.addEventListener('click',()=>{
+            const name = btn.getAttribute('data-template');
+            applyTemplate(name);
+            templatesSheet.classList.add('hidden');
+            templatesSheet.setAttribute('aria-hidden','true');
+        }));
+
+        function applyTemplate(name){
+            const presets = {
+                'push-pull-legs': {
+                    Monday: {category:'Chest', exercises:['Bench Press','Incline Press','Cable Fly']},
+                    Wednesday: {category:'Back', exercises:['Barbell Row','Lat Pulldown','Deadlift']},
+                    Friday: {category:'Legs', exercises:['Squat','Leg Press','Calf Raise']}
+                },
+                'arnold-split': {
+                    Monday:{category:'Chest/Back', exercises:['Bench Press','Barbell Row']},
+                    Tuesday:{category:'Shoulders/Arms', exercises:['Overhead Press','Bicep Curl']}
+                },
+                'bro-split': {
+                    Monday:{category:'Chest', exercises:['Bench Press','Pec Deck']},
+                    Tuesday:{category:'Back', exercises:['Deadlift','Pullup']}
+                },
+                'upper-lower': {
+                    Monday:{category:'Upper', exercises:['Bench Press','Barbell Row']},
+                    Thursday:{category:'Lower', exercises:['Squat','Deadlift']}
+                }
+            };
+            const template = presets[name];
+            if(!template) return;
+            DAYS.forEach(d=>{state.days[d].category=''; state.days[d].exercises=[]});
+            Object.entries(template).forEach(([day,info])=>{
+                state.days[day].category = info.category;
+                info.exercises.forEach(ex=> state.days[day].exercises.push({exercise_name:ex, sets:[{target_reps:12,set_order:0},{target_reps:10,set_order:1},{target_reps:8,set_order:2}]}));
+            });
+            ui.toast('Template applied', 'success');
+            render();
+        }
+
+        form.addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            const payload = buildPayload();
+            if(!payload.days.length){ ui.toast('Add at least one day with exercises','error'); return; }
+            if(activeEditWorkoutId){ await api.updateWorkout(activeEditWorkoutId,payload); ui.toast('Workout plan updated','success'); }
+            else { await api.createWorkout(payload); ui.toast('Workout plan saved','success'); }
+            activeEditWorkoutId = null; form.reset(); DAYS.forEach(d=>{state.days[d].category=''; state.days[d].exercises=[]}); render(); await renderSavedWorkouts();
+        });
+
+        function buildPayload(){
+            const days = Object.values(state.days)
+                .filter(d=>d.exercises && d.exercises.length)
+                .map(d=>({ day_name:d.day_name, category:d.category||'General', exercises:d.exercises.map(ex=>({ exercise_name:ex.exercise_name, sets: ex.sets.map((s,i)=>({ target_reps: s.target_reps })) })) }));
+            return { name: form.elements.name.value || 'New Plan', notes: form.elements.notes.value || '', days };
+        }
+
+        async function renderSavedWorkouts(){
+            const { workouts } = await api.getWorkouts();
+            savedWorkouts.innerHTML = '';
+            if(!workouts.length){ savedWorkouts.innerHTML = `<div class="rounded-[1.5rem] bg-slate-50 p-4 text-sm text-slate-500">No workout plans yet. Create your first split above.</div>`; return; }
+            workouts.forEach((workout)=>{
+                const item = document.createElement('div');
+                item.className='rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4';
                 item.innerHTML = `
                     <div class="flex items-start justify-between gap-4">
                         <div>
@@ -181,26 +344,30 @@
                         </div>
                     </div>
                 `;
-                item.querySelector('[data-action="edit"]').addEventListener("click", () => populateWorkoutEditor(workout));
-                item.querySelector('[data-action="delete"]').addEventListener("click", async () => {
-                    await api.deleteWorkout(workout.id);
-                    ui.toast("Workout removed");
-                    await renderSavedWorkouts();
-                });
+                item.querySelector('[data-action="edit"]').addEventListener('click',()=> populateWorkoutEditor(workout));
+                item.querySelector('[data-action="delete"]').addEventListener('click',async ()=>{ await api.deleteWorkout(workout.id); ui.toast('Workout removed'); renderSavedWorkouts(); });
                 savedWorkouts.appendChild(item);
             });
         }
 
-        function populateWorkoutEditor(workout) {
-            activeEditWorkoutId = workout.id;
-            form.reset();
-            builder.innerHTML = "";
-            form.elements.name.value = workout.name;
-            form.elements.notes.value = workout.notes || "";
-            workout.days.forEach((day) => addDayCard(builder, day));
+        function populateWorkoutEditor(workout){
+            activeEditWorkoutId = workout.id; form.reset();
+            DAYS.forEach(d=>{state.days[d].category=''; state.days[d].exercises=[]});
+            workout.days.forEach(d=>{
+                if(state.days[d.day_name]){
+                    state.days[d.day_name].category = d.category || '';
+                    state.days[d.day_name].exercises = d.exercises.map(ex=>({ exercise_name: ex.exercise_name || ex.name, sets: ex.sets.map(s=>({ target_reps: s.target_reps })) }));
+                }
+            });
+            form.elements.name.value = workout.name; form.elements.notes.value = workout.notes || '';
             ui.toast(`Editing ${workout.name}`);
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            render();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        render();
+        renderChips();
+        await renderSavedWorkouts();
     }
 
     async function initLiveWorkout() {
