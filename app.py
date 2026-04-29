@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import sqlite3
+import sys
 from contextlib import closing
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -286,6 +287,22 @@ def clear_all_user_data(user_id: int = DEFAULT_USER_ID) -> None:
         conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
         ensure_user_exists(conn, user_id)
         conn.commit()
+
+
+def wipe_database() -> None:
+    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+    database_files = [
+        DATABASE_PATH,
+        DATABASE_PATH.with_suffix(f"{DATABASE_PATH.suffix}-wal"),
+        DATABASE_PATH.with_suffix(f"{DATABASE_PATH.suffix}-shm"),
+    ]
+    for path in database_files:
+        if path.exists():
+            path.unlink()
+    init_db()
+    sys.stdout.buffer.write("[✓] Database reset complete\n".encode("utf-8"))
+    sys.stdout.flush()
+    app.logger.info("database wipe complete path=%s", DATABASE_PATH)
 
 
 def validate_profile(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1215,6 +1232,13 @@ def api_history() -> Any:
 def api_reset_data() -> Any:
     clear_all_user_data()
     return json_success(profile=get_profile(), message="All profile and training data cleared")
+
+
+# Temporary admin route. Remove before production deployment.
+@app.get("/wipe-database")
+def wipe_database_route() -> tuple[str, int]:
+    wipe_database()
+    return ("Database wiped successfully", 200)
 
 
 @app.post("/api/body-weight")
