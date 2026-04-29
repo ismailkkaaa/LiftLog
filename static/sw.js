@@ -1,4 +1,4 @@
-const CACHE_NAME = "liftlog-v3";
+const CACHE_NAME = "liftlog-v4";
 const APP_ASSETS = [
     "/",
     "/dashboard",
@@ -13,15 +13,13 @@ const APP_ASSETS = [
     "/static/js/app.js",
     "/static/js/pwa.js",
     "/static/manifest.json",
-    "/static/images/icon-192-v2.png",
-    "/static/images/icon-512-v2.png",
+    "/static/images/logo.png",
 ];
 
 self.addEventListener("install", (event) => {
     // Force reload resources to ensure new icons are fetched
     event.waitUntil(
         caches.open(CACHE_NAME).then(async (cache) => {
-            // Use Request with cache: 'reload' to bypass HTTP cache where supported
             const requests = APP_ASSETS.map((url) => new Request(url, { cache: 'reload' }));
             await cache.addAll(requests);
         })
@@ -43,6 +41,26 @@ self.addEventListener("activate", (event) => {
     self.clients.claim();
 });
 
+// Listen for messages from clients to trigger cache / site-data clearing
+self.addEventListener('message', (event) => {
+    try {
+        const data = event.data || {};
+        if (data && data.type === 'CLEAR_SITE_DATA') {
+            // Remove all caches (allow client to clear localStorage/indexedDB)
+            caches.keys().then((keys) => Promise.all(keys.map(k => caches.delete(k))));
+            // Notify clients to clear their own storage
+            self.clients.matchAll().then((clients) => {
+                clients.forEach((client) => client.postMessage({ type: 'CLIENT_CLEAR_SITE_DATA' }));
+            });
+        }
+        if (data && data.type === 'SKIP_WAITING') {
+            self.skipWaiting();
+        }
+    } catch (e) {
+        // ignore
+    }
+});
+
 self.addEventListener("fetch", (event) => {
     if (event.request.method !== "GET") return;
     const requestUrl = new URL(event.request.url);
@@ -54,7 +72,6 @@ self.addEventListener("fetch", (event) => {
         caches.match(event.request).then((cached) => {
             if (cached) return cached;
             return fetch(event.request).then((response) => {
-                // Only cache successful responses
                 if (!response || response.status !== 200 || response.type === 'opaque') return response;
                 const cloned = response.clone();
                 caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));

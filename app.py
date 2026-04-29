@@ -1194,10 +1194,10 @@ def service_worker() -> Any:
 
 @app.route("/favicon.ico")
 def favicon() -> Any:
-    # Serve updated PNG-based favicon if present, fall back to legacy favicon.ico
-    png_path = os.path.join(app.root_path, "static", "images", "icon-192-v2.png")
+    # Serve the official logo as the favicon to ensure consistent branding
+    png_path = os.path.join(app.root_path, "static", "images", "logo.png")
     if os.path.exists(png_path):
-        return send_from_directory(os.path.join(app.root_path, "static", "images"), "icon-192-v2.png", mimetype="image/png")
+        return send_from_directory(os.path.join(app.root_path, "static", "images"), "logo.png", mimetype="image/png")
     return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico", mimetype="image/vnd.microsoft.icon")
 
 

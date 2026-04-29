@@ -11,10 +11,10 @@
             <div class="flex items-center justify-between">
                 <label class="field flex-1 mr-3">
                     <span>Plan name</span>
-                    <input name="name" type="text" placeholder="Push Pull Legs" required>
+                    <input name="name" type="text" placeholder="My Plan" required>
                 </label>
                 <div class="w-36">
-                    <button id="open-templates" type="button" class="secondary-button w-full">Templates</button>
+                    <!-- Templates removed — users create original plans -->
                 </div>
             </div>
             <label class="field">
@@ -60,10 +60,7 @@
         <div class="modal-card">
             <h3 class="text-lg font-bold">Workout templates</h3>
             <div id="template-list" class="mt-3 space-y-2">
-                <button class="primary-button w-full" data-template="push-pull-legs">Push Pull Legs</button>
-                <button class="primary-button w-full" data-template="arnold-split">Arnold Split</button>
-                <button class="primary-button w-full" data-template="bro-split">Bro Split</button>
-                <button class="primary-button w-full" data-template="upper-lower">Upper Lower</button>
+                <div class="text-sm text-slate-500">No templates — create a custom plan.</div>
             </div>
             <div class="mt-3 text-right">
                 <button data-close-modal class="secondary-button">Close</button>

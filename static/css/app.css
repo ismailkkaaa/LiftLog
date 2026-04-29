@@ -227,6 +227,8 @@ body {
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    max-width: calc(100% - 24px);
+    overflow-wrap: break-word;
 }
 
 .workout-day-badge.is-complete {

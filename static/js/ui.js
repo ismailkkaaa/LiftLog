@@ -55,6 +55,43 @@ window.LiftLogUI = (() => {
         ].forEach((k) => localStorage.removeItem(k));
     }
 
+    async function clearAllClientStorage() {
+        try {
+            // Clear all localStorage (keep only keys needed?) — for now clear known keys plus others
+            try { localStorage.clear(); } catch (e) { console.warn('localStorage clear failed', e); }
+
+            // Clear all caches
+            if (window.caches && caches.keys) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+
+            // Clear IndexedDB databases where supported
+            if (indexedDB && indexedDB.databases) {
+                const dbs = await indexedDB.databases();
+                await Promise.all(dbs.map(db => new Promise((res, rej) => {
+                    try { indexedDB.deleteDatabase(db.name).onsuccess = res; } catch (e) { res(); }
+                })));
+            } else {
+                // Best-effort: try common DB names
+                const known = ['liftlog-db', 'workout-db', 'idb_database'];
+                await Promise.all(known.map(name => new Promise((res) => {
+                    try { indexedDB.deleteDatabase(name).onsuccess = res; } catch (e) { res(); }
+                })));
+            }
+
+            // Notify service worker if present to purge its caches too
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'CLIENT_CLEAR_SITE_DATA_ACK' });
+            }
+
+            // Reload to ensure fresh assets are fetched
+            setTimeout(() => location.reload(true), 350);
+        } catch (e) {
+            console.warn('Failed to clear client storage', e);
+        }
+    }
+
     function formatDateTime(value) {
         if (!value) return "";
         return new Date(value).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -68,6 +105,7 @@ window.LiftLogUI = (() => {
         readSessionState,
         clearSessionState,
         clearSampleLocalStorage,
+        clearAllClientStorage,
         formatDateTime,
     };
 })();
