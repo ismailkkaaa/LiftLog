@@ -6,9 +6,13 @@
     <title>LiftLog — Premium Gym Workout Tracker</title>
     <meta name="description" content="Elevate your fitness journey with LiftLog. A professional, minimalist workout tracker designed for serious athletes.">
     
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#F5FAFC">
+    <link rel="manifest" href="manifest.json">
+
     <!-- Favicons -->
-    <link rel="icon" type="image/png" href="static/images/favicon.png">
-    <link rel="apple-touch-icon" href="static/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="static/images/favicon.png?v=2">
+    <link rel="apple-touch-icon" href="static/images/apple-touch-icon.png?v=2">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,6 +70,17 @@
             0% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
             100% { transform: translateY(0px); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
 
         .reveal {
@@ -160,6 +175,7 @@
             cursor: pointer;
             border: none;
             gap: 8px;
+            white-space: nowrap;
         }
 
         .btn-primary {
@@ -272,6 +288,45 @@
         .ui-1 { top: 20%; left: -60px; animation-delay: 0s; }
         .ui-2 { bottom: 15%; right: -60px; animation-delay: 1s; }
 
+        /* --- Live Activity --- */
+        .activity-feed {
+            position: absolute;
+            right: 50px;
+            top: 200px;
+            width: 280px;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .activity-item {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            font-size: 13px;
+            color: var(--secondary);
+            animation: slideIn 0.5s ease-out forwards;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .activity-item .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        @media (max-width: 1200px) {
+            .activity-feed { display: none; }
+        }
+
         /* --- Features --- */
         .section-tag {
             display: inline-block;
@@ -340,7 +395,7 @@
             color: var(--muted);
         }
 
-        /* --- Stats --- */
+        /* --- Live Stats --- */
         .stats {
             background: var(--secondary);
             color: white;
@@ -421,11 +476,6 @@
             font-size: 14px;
         }
 
-        .social-links {
-            display: flex;
-            gap: 20px;
-        }
-
         /* --- Mobile Responsive --- */
         @media (max-width: 992px) {
             .footer-grid {
@@ -451,32 +501,34 @@
         <div class="container">
             <nav>
                 <a href="#" class="logo">
-                    <img src="static/images/logo.png" alt="LiftLog Logo">
+                    <img src="static/images/logo.png?v=2" alt="LiftLog Logo">
                     <span>LiftLog</span>
                 </a>
                 <div class="nav-links">
                     <a href="#features">Features</a>
                     <a href="#showcase">Preview</a>
-                    <a href="https://github.com/albas/liftlog" target="_blank">Repository</a>
-                    <a href="https://liftlog.onrender.com" class="btn btn-primary">Open App</a>
+                    <button class="btn btn-primary btn-install">Download App</button>
                 </div>
-                <button class="btn btn-primary" style="display: none;" id="mobile-cta">Open App</button>
+                <button class="btn btn-primary btn-install" style="display: none;" id="mobile-cta">Download App</button>
             </nav>
         </div>
     </header>
 
     <main>
+        <!-- Activity Feed -->
+        <div class="activity-feed" id="activity-feed"></div>
+
         <!-- Hero Section -->
         <section class="hero">
             <div class="container">
-                <span class="section-tag">Premium Fitness Tracking</span>
+                <span class="section-tag">Next-Gen Workout Tracking</span>
                 <h1>Train Smarter.<br><span>Log Better.</span></h1>
                 <p>The minimalist workout companion for serious lifters. Track your progress, crush your PRs, and maintain your streak with a beautiful, modern interface.</p>
                 <div class="hero-btns">
-                    <a href="https://liftlog.onrender.com" class="btn btn-primary">
-                        Open LiftLog
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    </a>
+                    <button class="btn btn-primary btn-install">
+                        Download App
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
                     <a href="#features" class="btn btn-secondary">Explore Features</a>
                 </div>
             </div>
@@ -487,7 +539,6 @@
             <div class="container">
                 <div class="app-mockup">
                     <div class="mockup-inner">
-                        <!-- We'll use a stylized representation since we don't have a screenshot file -->
                         <div style="background: var(--background); width: 100%; height: 100%; display: flex; flex-direction: column;">
                             <div style="height: 60px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px;">
                                 <div style="width: 30px; height: 30px; background: var(--primary); border-radius: 8px;"></div>
@@ -520,7 +571,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Floating UI elements for flair -->
+                    <!-- Floating UI elements -->
                     <div class="floating-ui ui-1">
                         <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">🔥</div>
                         <div>
@@ -600,7 +651,7 @@
                     <div class="stats-grid">
                         <div class="stat-item">
                             <h2 id="count1">0</h2>
-                            <p>Workouts Logged</p>
+                            <p>Total Downloads</p>
                         </div>
                         <div class="stat-item">
                             <h2 id="count2">0</h2>
@@ -608,7 +659,7 @@
                         </div>
                         <div class="stat-item">
                             <h2 id="count3">0</h2>
-                            <p>Exercises Tracked</p>
+                            <p>Workouts Logged</p>
                         </div>
                         <div class="stat-item">
                             <h2 id="count4">0</h2>
@@ -619,25 +670,13 @@
             </div>
         </section>
 
-        <!-- GitHub Section -->
-        <section style="text-align: center; background: #fff;">
-            <div class="container">
-                <h2 class="section-title">Open Source & Community Driven</h2>
-                <p style="color: var(--muted); max-width: 600px; margin: -40px auto 40px;">LiftLog is built by the community for the community. Explore our source code, contribute features, or host your own instance.</p>
-                <a href="https://github.com/albas/liftlog" target="_blank" class="btn btn-secondary">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                    View on GitHub
-                </a>
-            </div>
-        </section>
-
         <!-- CTA Section -->
         <section style="padding-bottom: 120px;">
             <div class="container">
                 <div style="background: linear-gradient(135deg, var(--primary), var(--accent)); padding: 80px 40px; border-radius: var(--radius-lg); text-align: center; color: white;">
                     <h2 style="font-family: var(--font-display); font-size: 40px; margin-bottom: 24px;">Ready to Level Up Your Training?</h2>
                     <p style="font-size: 20px; opacity: 0.9; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;">Join thousands of athletes who use LiftLog to track their progress and achieve their fitness goals.</p>
-                    <a href="https://liftlog.onrender.com" class="btn" style="background: white; color: var(--primary);">Get Started for Free</a>
+                    <button class="btn btn-install" style="background: white; color: var(--primary);">Download App Now</button>
                 </div>
             </div>
         </section>
@@ -659,15 +698,7 @@
                     <ul>
                         <li><a href="#features">Features</a></li>
                         <li><a href="#showcase">Showcase</a></li>
-                        <li><a href="https://liftlog.onrender.com">Web App</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Community</h4>
-                    <ul>
-                        <li><a href="https://github.com/albas/liftlog">GitHub</a></li>
-                        <li><a href="https://github.com/albas/liftlog/issues">Issues</a></li>
-                        <li><a href="https://github.com/albas/liftlog/pulls">Pull Requests</a></li>
+                        <li><button class="btn-install" style="background:none; border:none; color:var(--muted); font-size:inherit; font-family:inherit; cursor:pointer;">Download App</button></li>
                     </ul>
                 </div>
                 <div class="footer-col">
@@ -680,17 +711,36 @@
             </div>
             <div class="footer-bottom">
                 <p>&copy; 2026 LiftLog. All rights reserved.</p>
-                <div class="social-links">
-                    <a href="https://github.com/albas/liftlog" style="color: var(--muted);">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                    </a>
-                </div>
             </div>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script>
+        // PWA Install Logic
+        let deferredPrompt;
+        const appUrl = 'https://liftlogv1.onrender.com';
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('beforeinstallprompt event fired');
+        });
+
+        const installButtons = document.querySelectorAll('.btn-install');
+        installButtons.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User response to the install prompt: ${outcome}`);
+                    deferredPrompt = null;
+                } else {
+                    window.open(appUrl, '_blank');
+                }
+            });
+        });
+
         // Header scroll effect
         window.addEventListener('scroll', () => {
             const header = document.getElementById('header');
@@ -714,43 +764,75 @@
             });
         };
         window.addEventListener('scroll', reveal);
-        reveal(); // Initial check
+        reveal();
 
         // Counter animation
         const animateCount = (id, end, duration) => {
             let start = 0;
             const range = end - start;
-            const increment = end > start ? 1 : -1;
-            const stepTime = Math.abs(Math.floor(duration / range));
+            const increment = end > start ? Math.ceil(range / (duration / 16)) : -1;
             const obj = document.getElementById(id);
             
             const timer = setInterval(() => {
                 start += increment;
-                obj.innerText = start.toLocaleString() + (id === 'count2' ? '+' : '');
-                if (start == end) {
+                if (start >= end) {
+                    start = end;
                     clearInterval(timer);
                 }
-            }, stepTime);
+                obj.innerText = start.toLocaleString() + (id === 'count2' ? '+' : '');
+            }, 16);
         };
 
-        // Trigger counters when visible
-        const observerOptions = {
-            threshold: 0.5
-        };
-
+        const observerOptions = { threshold: 0.5 };
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    animateCount('count1', 50000, 2000);
+                    animateCount('count1', 25000, 2000);
                     animateCount('count2', 12000, 2000);
-                    animateCount('count3', 450, 2000);
-                    animateCount('count4', 8500, 2000);
+                    animateCount('count3', 150000, 2000);
+                    animateCount('count4', 45000, 2000);
                     observer.unobserve(entry.target);
                 }
             });
         }, observerOptions);
-
         observer.observe(document.querySelector('.stats'));
+
+        // Live Activity Feed
+        const activities = [
+            "Alex completed Push Day",
+            "12 new athletes joined",
+            "Bench PR increased by 5kg",
+            "Workout synced successfully",
+            "LiftLog installed on mobile",
+            "Sarah smashed Leg Day",
+            "30-day streak achieved by Mike",
+            "New workout plan created",
+            "Global PR average increased",
+            "App performance optimized"
+        ];
+
+        const feed = document.getElementById('activity-feed');
+        function addActivity() {
+            const text = activities[Math.floor(Math.random() * activities.length)];
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            item.innerHTML = `<div class="dot"></div><span>${text}</span>`;
+            
+            if (feed.children.length > 4) {
+                feed.removeChild(feed.lastChild);
+            }
+            feed.insertBefore(item, feed.firstChild);
+
+            setTimeout(() => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(20px)';
+                item.style.transition = 'all 0.5s ease';
+                setTimeout(() => item.remove(), 500);
+            }, 4000);
+        }
+
+        setInterval(addActivity, 3000);
+        addActivity();
     </script>
 </body>
 </html>
