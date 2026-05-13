@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiftLog — Premium Gym Workout Tracker</title>
+    <meta name="description" content="Elevate your fitness journey with LiftLog. A professional, minimalist workout tracker designed for serious athletes.">
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="static/images/favicon.png">
+    <link rel="apple-touch-icon" href="static/images/apple-touch-icon.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <style>
+        :root {
+            --primary: #2CB8D0;
+            --secondary: #00133D;
+            --background: #F5FAFC;
+            --card: #FFFFFF;
+            --text: #00133D;
+            --accent: #1D93BA;
+            --muted: #6B7280;
+            --border: rgba(44, 184, 208, 0.12);
+            --shadow-sm: 0 2px 4px rgba(0, 19, 61, 0.04);
+            --shadow-md: 0 12px 24px rgba(0, 19, 61, 0.08);
+            --shadow-lg: 0 24px 48px rgba(0, 19, 61, 0.12);
+            --radius-sm: 8px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: var(--transition);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- Layout --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        section {
+            padding: 100px 0;
+        }
+
+        /* --- Header --- */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 20px 0;
+            transition: var(--transition);
+        }
+
+        header.scrolled {
+            background: rgba(245, 250, 252, 0.8);
+            backdrop-filter: blur(12px);
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--secondary);
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 24px;
+        }
+
+        .logo img {
+            height: 40px;
+            width: auto;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--secondary);
+            font-weight: 600;
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 28px;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            text-decoration: none;
+            transition: var(--transition);
+            cursor: pointer;
+            border: none;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 8px 20px rgba(44, 184, 208, 0.2);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(44, 184, 208, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: rgba(44, 184, 208, 0.08);
+            color: var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(44, 184, 208, 0.15);
+        }
+
+        /* --- Hero --- */
+        .hero {
+            padding: 180px 0 100px;
+            text-align: center;
+            background: radial-gradient(circle at top right, rgba(44, 184, 208, 0.1), transparent 40%),
+                        radial-gradient(circle at bottom left, rgba(0, 19, 61, 0.05), transparent 40%);
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(40px, 8vw, 72px);
+            line-height: 1.1;
+            margin-bottom: 24px;
+            color: var(--secondary);
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .hero h1 span {
+            color: var(--primary);
+        }
+
+        .hero p {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--muted);
+            max-width: 700px;
+            margin: 0 auto 40px;
+            animation: fadeInUp 0.8s 0.2s ease-out both;
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            animation: fadeInUp 0.8s 0.4s ease-out both;
+        }
+
+        /* --- App Showcase --- */
+        .showcase {
+            padding-top: 0;
+            position: relative;
+        }
+
+        .app-mockup {
+            max-width: 900px;
+            margin: -60px auto 0;
+            background: var(--card);
+            border-radius: var(--radius-lg);
+            padding: 12px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            position: relative;
+            z-index: 10;
+            animation: fadeInUp 1s 0.6s ease-out both;
+        }
+
+        .mockup-inner {
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: #fff;
+            aspect-ratio: 16/10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .mockup-inner img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .floating-ui {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            padding: 16px 24px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .ui-1 { top: 20%; left: -60px; animation-delay: 0s; }
+        .ui-2 { bottom: 15%; right: -60px; animation-delay: 1s; }
+
+        /* --- Features --- */
+        .section-tag {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(44, 184, 208, 0.1);
+            color: var(--primary);
+            border-radius: 100px;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: clamp(32px, 4vw, 48px);
+            color: var(--secondary);
+            margin-bottom: 60px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+        }
+
+        .feature-card {
+            background: var(--card);
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(44, 184, 208, 0.1);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            color: var(--primary);
+        }
+
+        .feature-icon svg {
+            width: 30px;
+            height: 30px;
+        }
+
+        .feature-card h3 {
+            font-size: 22px;
+            margin-bottom: 16px;
+            color: var(--secondary);
+        }
+
+        .feature-card p {
+            color: var(--muted);
+        }
+
+        /* --- Stats --- */
+        .stats {
+            background: var(--secondary);
+            color: white;
+            border-radius: var(--radius-lg);
+            margin: 0 24px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 48px;
+            text-align: center;
+        }
+
+        .stat-item h2 {
+            font-family: var(--font-display);
+            font-size: 48px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .stat-item p {
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 600;
+        }
+
+        /* --- Footer --- */
+        footer {
+            background: #fff;
+            padding: 80px 0 40px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 60px;
+            margin-bottom: 60px;
+        }
+
+        .footer-brand p {
+            margin-top: 20px;
+            color: var(--muted);
+            max-width: 300px;
+        }
+
+        .footer-col h4 {
+            margin-bottom: 24px;
+            color: var(--secondary);
+            font-size: 18px;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: 12px;
+        }
+
+        .footer-col ul li a {
+            text-decoration: none;
+            color: var(--muted);
+            transition: var(--transition);
+        }
+
+        .footer-col ul li a:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            padding-top: 40px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        /* --- Mobile Responsive --- */
+        @media (max-width: 992px) {
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .ui-1, .ui-2 { display: none; }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            section { padding: 60px 0; }
+            .hero { padding: 140px 0 60px; }
+            .footer-grid { grid-template-columns: 1fr; gap: 40px; }
+            .hero-btns { flex-direction: column; }
+            .hero-btns .btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header id="header">
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">
+                    <img src="static/images/logo.png" alt="LiftLog Logo">
+                    <span>LiftLog</span>
+                </a>
+                <div class="nav-links">
+                    <a href="#features">Features</a>
+                    <a href="#showcase">Preview</a>
+                    <a href="https://github.com/albas/liftlog" target="_blank">Repository</a>
+                    <a href="https://liftlog.onrender.com" class="btn btn-primary">Open App</a>
+                </div>
+                <button class="btn btn-primary" style="display: none;" id="mobile-cta">Open App</button>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <span class="section-tag">Premium Fitness Tracking</span>
+                <h1>Train Smarter.<br><span>Log Better.</span></h1>
+                <p>The minimalist workout companion for serious lifters. Track your progress, crush your PRs, and maintain your streak with a beautiful, modern interface.</p>
+                <div class="hero-btns">
+                    <a href="https://liftlog.onrender.com" class="btn btn-primary">
+                        Open LiftLog
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </a>
+                    <a href="#features" class="btn btn-secondary">Explore Features</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Showcase -->
+        <section class="showcase" id="showcase">
+            <div class="container">
+                <div class="app-mockup">
+                    <div class="mockup-inner">
+                        <!-- We'll use a stylized representation since we don't have a screenshot file -->
+                        <div style="background: var(--background); width: 100%; height: 100%; display: flex; flex-direction: column;">
+                            <div style="height: 60px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px;">
+                                <div style="width: 30px; height: 30px; background: var(--primary); border-radius: 8px;"></div>
+                                <div style="margin-left: 12px; width: 80px; height: 10px; background: var(--border); border-radius: 4px;"></div>
+                            </div>
+                            <div style="flex: 1; padding: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div style="background: #fff; border-radius: 16px; border: 1px solid var(--border); padding: 20px;">
+                                    <div style="width: 40px; height: 40px; background: rgba(44, 184, 208, 0.1); border-radius: 10px; margin-bottom: 15px;"></div>
+                                    <div style="width: 100%; height: 12px; background: var(--border); border-radius: 4px; margin-bottom: 8px;"></div>
+                                    <div style="width: 60%; height: 12px; background: var(--border); border-radius: 4px;"></div>
+                                </div>
+                                <div style="background: #fff; border-radius: 16px; border: 1px solid var(--border); padding: 20px;">
+                                    <div style="width: 40px; height: 40px; background: rgba(0, 19, 61, 0.05); border-radius: 10px; margin-bottom: 15px;"></div>
+                                    <div style="width: 100%; height: 12px; background: var(--border); border-radius: 4px; margin-bottom: 8px;"></div>
+                                    <div style="width: 60%; height: 12px; background: var(--border); border-radius: 4px;"></div>
+                                </div>
+                                <div style="grid-column: span 2; background: #fff; border-radius: 16px; border: 1px solid var(--border); padding: 20px; height: 120px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                                        <div style="width: 100px; height: 12px; background: var(--border); border-radius: 4px;"></div>
+                                        <div style="width: 60px; height: 12px; background: var(--primary); border-radius: 4px; opacity: 0.3;"></div>
+                                    </div>
+                                    <div style="display: flex; align-items: flex-end; gap: 10px; height: 50px;">
+                                        <div style="flex: 1; height: 40%; background: var(--primary); border-radius: 4px; opacity: 0.2;"></div>
+                                        <div style="flex: 1; height: 70%; background: var(--primary); border-radius: 4px; opacity: 0.4;"></div>
+                                        <div style="flex: 1; height: 90%; background: var(--primary); border-radius: 4px;"></div>
+                                        <div style="flex: 1; height: 60%; background: var(--primary); border-radius: 4px; opacity: 0.6;"></div>
+                                        <div style="flex: 1; height: 80%; background: var(--primary); border-radius: 4px; opacity: 0.8;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Floating UI elements for flair -->
+                    <div class="floating-ui ui-1">
+                        <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">🔥</div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 14px; color: var(--secondary);">12 Day Streak</div>
+                            <div style="font-size: 12px; color: var(--muted);">Keep it up!</div>
+                        </div>
+                    </div>
+                    <div class="floating-ui ui-2">
+                        <div style="width: 32px; height: 32px; background: #00E5A0; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">✓</div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 14px; color: var(--secondary);">Session Logged</div>
+                            <div style="font-size: 12px; color: var(--muted);">Bench Press: 100kg</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features -->
+        <section id="features">
+            <div class="container">
+                <div style="text-align: center;">
+                    <span class="section-tag">Features</span>
+                    <h2 class="section-title">Built for Performance</h2>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                        </div>
+                        <h3>Smart Logging</h3>
+                        <p>Quickly log your sets, reps, and weights with an interface designed for the gym floor. No distractions, just tracking.</p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                        </div>
+                        <h3>Deep Analytics</h3>
+                        <p>Visualize your progress with beautiful charts. Track your volume, intensity, and personal records over time.</p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        </div>
+                        <h3>Workout Plans</h3>
+                        <p>Create and customize your training routines. Organize your week and stay consistent with scheduled workouts.</p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                        </div>
+                        <h3>Offline First</h3>
+                        <p>Log your workouts even without an internet connection. LiftLog syncs automatically when you're back online.</p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        </div>
+                        <h3>Rest Timers</h3>
+                        <p>Stay focused and keep your intensity high with built-in rest timers optimized for your training goals.</p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </div>
+                        <h3>Privacy Focused</h3>
+                        <p>Your data is yours. We prioritize your privacy and ensure your workout data stays secure and private.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section class="container">
+            <div class="stats">
+                <div style="padding: 80px 40px;">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <h2 id="count1">0</h2>
+                            <p>Workouts Logged</p>
+                        </div>
+                        <div class="stat-item">
+                            <h2 id="count2">0</h2>
+                            <p>Active Users</p>
+                        </div>
+                        <div class="stat-item">
+                            <h2 id="count3">0</h2>
+                            <p>Exercises Tracked</p>
+                        </div>
+                        <div class="stat-item">
+                            <h2 id="count4">0</h2>
+                            <p>PRs Broken</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GitHub Section -->
+        <section style="text-align: center; background: #fff;">
+            <div class="container">
+                <h2 class="section-title">Open Source & Community Driven</h2>
+                <p style="color: var(--muted); max-width: 600px; margin: -40px auto 40px;">LiftLog is built by the community for the community. Explore our source code, contribute features, or host your own instance.</p>
+                <a href="https://github.com/albas/liftlog" target="_blank" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                    View on GitHub
+                </a>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section style="padding-bottom: 120px;">
+            <div class="container">
+                <div style="background: linear-gradient(135deg, var(--primary), var(--accent)); padding: 80px 40px; border-radius: var(--radius-lg); text-align: center; color: white;">
+                    <h2 style="font-family: var(--font-display); font-size: 40px; margin-bottom: 24px;">Ready to Level Up Your Training?</h2>
+                    <p style="font-size: 20px; opacity: 0.9; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;">Join thousands of athletes who use LiftLog to track their progress and achieve their fitness goals.</p>
+                    <a href="https://liftlog.onrender.com" class="btn" style="background: white; color: var(--primary);">Get Started for Free</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="logo">
+                        <img src="static/images/logo.png?v=2" alt="LiftLog Logo">
+                        <span>LiftLog</span>
+                    </a>
+                    <p>The premium, minimalist workout tracker for dedicated athletes.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#showcase">Showcase</a></li>
+                        <li><a href="https://liftlog.onrender.com">Web App</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="https://github.com/albas/liftlog">GitHub</a></li>
+                        <li><a href="https://github.com/albas/liftlog/issues">Issues</a></li>
+                        <li><a href="https://github.com/albas/liftlog/pulls">Pull Requests</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 LiftLog. All rights reserved.</p>
+                <div class="social-links">
+                    <a href="https://github.com/albas/liftlog" style="color: var(--muted);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Header scroll effect
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('header');
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Reveal on scroll
+        const reveal = () => {
+            const reveals = document.querySelectorAll('.reveal');
+            reveals.forEach(el => {
+                const windowHeight = window.innerHeight;
+                const elementTop = el.getBoundingClientRect().top;
+                const elementVisible = 100;
+                if (elementTop < windowHeight - elementVisible) {
+                    el.classList.add('active');
+                }
+            });
+        };
+        window.addEventListener('scroll', reveal);
+        reveal(); // Initial check
+
+        // Counter animation
+        const animateCount = (id, end, duration) => {
+            let start = 0;
+            const range = end - start;
+            const increment = end > start ? 1 : -1;
+            const stepTime = Math.abs(Math.floor(duration / range));
+            const obj = document.getElementById(id);
+            
+            const timer = setInterval(() => {
+                start += increment;
+                obj.innerText = start.toLocaleString() + (id === 'count2' ? '+' : '');
+                if (start == end) {
+                    clearInterval(timer);
+                }
+            }, stepTime);
+        };
+
+        // Trigger counters when visible
+        const observerOptions = {
+            threshold: 0.5
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCount('count1', 50000, 2000);
+                    animateCount('count2', 12000, 2000);
+                    animateCount('count3', 450, 2000);
+                    animateCount('count4', 8500, 2000);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        observer.observe(document.querySelector('.stats'));
+    </script>
+</body>
+</html>
